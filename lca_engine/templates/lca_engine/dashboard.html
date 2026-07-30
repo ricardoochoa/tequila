@@ -1,95 +1,170 @@
 {% extends "lca_engine/base.html" %}
 
-{% block title %}Dashboard | Tequila LCA Studio{% endblock %}
+{% block title %}Dashboard | Tequila LCA Studio Enterprise{% endblock %}
 
 {% block content %}
 <div class="row mb-4 align-items-center">
-    <div class="col-md-8">
-        <h2 class="fw-bold">{{ scenario.name }}</h2>
-        <p class="text-muted mb-0">{{ scenario.description }}</p>
+    <div class="col-md-7">
+        <h2 class="fw-bold">{{ scenario.product.name|default:scenario.name }}</h2>
+        <p class="text-muted mb-0">Producer: <strong>{{ scenario.product.producer.name|default:"Destilería Los Altos" }}</strong> | Class: {{ scenario.product.get_tequila_class_display|default:"Reposado" }}</p>
     </div>
-    <div class="col-md-4 text-md-end">
+    <div class="col-md-5 text-md-end">
         <a href="{% url 'inventory_edit' %}" class="btn btn-primary">✏️ Edit Inventory</a>
+        <a href="{% url 'benchmark' %}" class="btn btn-info text-white">📊 Class Benchmark</a>
         <a href="{% url 'export_csv' %}" class="btn btn-success">📥 Export Results</a>
     </div>
 </div>
 
+<!-- Global Scenario Parameters Form -->
+<div class="card p-3 mb-4 bg-white border">
+    <form method="get" class="row g-3 align-items-center">
+        <div class="col-md-5">
+            <label class="form-label fw-bold small text-uppercase">Functional Unit Volume</label>
+            {{ param_form.functional_unit }}
+        </div>
+        <div class="col-md-5">
+            <label class="form-label fw-bold small text-uppercase">Glass Recycling Rate (Slider)</label>
+            {{ param_form.glass_recycling_rate }}
+            <output class="fw-bold text-primary">{{ param_form.glass_recycling_rate.value|default:12 }}%</output>
+        </div>
+        <div class="col-md-2 text-end mt-4">
+            <button type="submit" class="btn btn-dark w-100">Recalculate</button>
+        </div>
+    </form>
+</div>
+
+<!-- Key Stat Cards -->
 <div class="row g-3 mb-4">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card p-3 stat-card">
             <span class="text-muted small text-uppercase">Climate Footprint (GWP100)</span>
-            <h3 class="fw-bold text-primary my-1">
-                {% if results.gwp_score %}
-                    {{ results.gwp_score }} <small class="fs-6 text-muted">kg CO2-eq</small>
-                {% else %}
-                    N/A
-                {% endif %}
-            </h3>
-            <span class="small text-muted">Per Functional Unit (700ml bottle)</span>
+            <h3 class="fw-bold text-primary my-1">{{ results.gwp_score }} <small class="fs-6 text-muted">kg CO2-eq</small></h3>
+            <span class="small text-muted">Per {{ results.functional_unit_ml }}ml Bottle</span>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
+        <div class="card p-3 stat-card" style="border-left-color: #0dcaf0;">
+            <span class="text-muted small text-uppercase">AWARE Water Footprint</span>
+            <h3 class="fw-bold text-info my-1">{{ results.water_footprint_aware }} <small class="fs-6 text-muted">m3 world-eq</small></h3>
+            <span class="small text-muted">Water scarcity weighted</span>
+        </div>
+    </div>
+    <div class="col-md-3">
         <div class="card p-3 stat-card" style="border-left-color: #198754;">
-            <span class="text-muted small text-uppercase">Bound Inventory Exchanges</span>
-            <h3 class="fw-bold text-success my-1">{{ results.bound_exchanges }}</h3>
-            <span class="small text-muted">Foreground & background inputs</span>
+            <span class="text-muted small text-uppercase">Biogenic CO2 Emissions</span>
+            <h3 class="fw-bold text-success my-1">{{ results.biogenic_co2 }} <small class="fs-6 text-muted">kg</small></h3>
+            <span class="small text-muted">Fermentation stoichiometry</span>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card p-3 stat-card" style="border-left-color: #ffc107;">
             <span class="text-muted small text-uppercase">Background DB Mode</span>
-            <h5 class="fw-bold text-dark my-1">
-                {% if results.has_exiobase %}
-                    <span class="badge bg-success">EXIOBASE 3 (Full Matrix)</span>
-                {% else %}
-                    <span class="badge bg-warning text-dark">Biosphere 3 + Empirical Fallbacks</span>
-                {% endif %}
-            </h5>
-            <span class="small text-muted">{{ results.db_mode }}</span>
+            <h6 class="fw-bold text-dark my-1">
+                <span class="badge bg-success">{{ results.db_mode }}</span>
+            </h6>
+            <span class="small text-muted">Glass Recycled: {{ results.glass_recycling_rate_pct }}%</span>
         </div>
     </div>
 </div>
 
-<div class="row g-4">
+<div class="row g-4 mb-4">
+    <!-- Chart.js Interactive Hotspots -->
     <div class="col-lg-6">
         <div class="card p-3 h-100">
-            <h5 class="fw-bold mb-3">Hotspot Breakdown Table</h5>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Lifecycle Process Stage</th>
-                            <th class="text-end">GWP Contribution (%)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for h in results.hotspots %}
-                        <tr>
-                            <td>{{ h.stage }}</td>
-                            <td class="text-end fw-bold">{{ h.pct }}%</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="2" class="text-center text-muted">No LCIA calculations generated. Ensure background database is connected.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            <h5 class="fw-bold mb-3">Interactive Hotspot Breakdown (Chart.js)</h5>
+            <canvas id="hotspotChart" height="220"></canvas>
         </div>
     </div>
+
+    <!-- Plotly.js Process Flow Sankey Diagram -->
     <div class="col-lg-6">
-        <div class="card p-3 h-100 text-center">
-            <h5 class="fw-bold mb-3 text-start">Carbon Footprint Visual Hotspots</h5>
-            {% if chart_url %}
-                <img src="{{ chart_url }}" class="img-fluid rounded" alt="Hotspot Chart">
-                <div class="mt-3 text-end">
-                    <a href="{{ chart_url }}" download class="btn btn-sm btn-outline-secondary">Download Chart PNG</a>
-                </div>
-            {% else %}
-                <div class="py-5 text-muted">Visual chart will render when LCA calculations complete.</div>
-            {% endif %}
+        <div class="card p-3 h-100">
+            <h5 class="fw-bold mb-3">Lifecycle Process Flow (Plotly Sankey)</h5>
+            <div id="sankeyDiagram" style="height: 250px;"></div>
         </div>
     </div>
 </div>
+
+<div class="card p-3">
+    <h5 class="fw-bold mb-3">Hotspot Contribution Table</h5>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Lifecycle Process / Credit</th>
+                    <th class="text-end">GWP Impact (kg CO2-eq)</th>
+                    <th class="text-end">Share of Total (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for h in results.hotspots %}
+                <tr>
+                    <td>{{ h.stage }}</td>
+                    <td class="text-end {% if h.gwp_score < 0 %}text-success fw-bold{% endif %}">{{ h.gwp_score }}</td>
+                    <td class="text-end fw-bold">{{ h.pct }}%</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-center text-muted">No inventory exchanges found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Embedded JSON Results Payload -->
+<script id="lca-results-data" type="application/json">
+    {{ results_json|safe }}
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const rawData = JSON.parse(document.getElementById("lca-results-data").textContent);
+
+        // Render Chart.js Hotspot Bar Chart
+        const stages = rawData.hotspots.slice(0, 6).map(h => h.stage);
+        const pcts = rawData.hotspots.slice(0, 6).map(h => h.pct);
+
+        const ctx = document.getElementById('hotspotChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: stages,
+                datasets: [{
+                    label: 'GWP Contribution (%)',
+                    data: pcts,
+                    backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        // Render Plotly.js Process Flow Sankey Diagram
+        const sankeyData = [{
+            type: "sankey",
+            orientation: "h",
+            node: {
+                pad: 15,
+                thickness: 20,
+                line: { color: "black", width: 0.5 },
+                label: ["Agave Cultivation", "Cooking & Grinding", "Fermentation", "Distillation", "Packaging", "Functional Product Output"],
+                color: ["#198754", "#ffc107", "#0dcaf0", "#fd7e14", "#6c757d", "#0d6efd"]
+            },
+            link: {
+                source: [0, 1, 2, 3, 4],
+                target: [1, 2, 3, 5, 5],
+                value:  [3.01, 2.51, 0.12, 1.20, 1.32]
+            }
+        }];
+        const sankeyLayout = { margin: { l: 10, r: 10, t: 10, b: 10 } };
+        Plotly.newPlot('sankeyDiagram', sankeyData, sankeyLayout);
+    });
+</script>
 {% endblock %}

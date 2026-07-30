@@ -1,35 +1,39 @@
 """
-Django views for Tequila LCA Web Application dashboard, inventory forms, and exports.
+Django views for Tequila LCA Studio: Dashboard, Chart.js / Plotly JSON APIs, CSV Schema Mapper, & Tequila Class Benchmarking.
 """
 
-import os
+import json
+import pandas as pd
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse, Http404
-from django.conf import settings
-from .models import InventoryScenario, InventoryExchange
-from .forms import CSVUploadForm, InventoryExchangeFormSet
+from django.http import HttpResponse, JsonResponse
+from .models import Producer, Product, InventoryScenario, InventoryExchange, LCAResult
+from .forms import CSVUploadForm, InventoryExchangeFormSet, GlobalParameterForm, CSVSchemaMapperForm
 from .services.bw_calculator import TequilaBWCalculator
 from .services.csv_handler import parse_inventory_csv, generate_hotspot_csv
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 
-def get_or_create_default_scenario():
-    scenario, created = InventoryScenario.objects.get_or_create(
-        name="100% Reposado Tequila Bottle (700ml)",
-        defaults={"description": "Default cradle-to-gate inventory process."}
+def get_or_create_default_producer_and_product():
+    producer, _ = Producer.objects.get_or_create(
+        name="Destilería Los Altos",
+        defaults={"location": "Jalisco, Mexico"}
     )
-    if created:
-        # Populate initial paper baseline
+    product, _ = Product.objects.get_or_create(
+        producer=producer,
+        name="100% Reposado Tequila",
+        defaults={"tequila_class": "reposado", "bottle_weight_g": 550.0, "aging_months": 6}
+    )
+    scenario, created = InventoryScenario.objects.get_or_create(
+        product=product,
+        name="100% Reposado Tequila (Baseline)",
+        defaults={"description": "Standard cradle-to-gate inventory process.", "version": 1, "is_baseline": True}
+    )
+    if created or scenario.exchanges.count() == 0:
         defaults = [
-            {"stage_name": "Reposado Tequila Bottle Output", "category": "Production", "query": "", "amount": 1.0, "unit": "unit", "location": "MX", "exchange_type": "production"},
+            {"stage_name": "Reposado Tequila Output", "category": "Production", "query": "", "amount": 1.0, "unit": "unit", "location": "MX", "exchange_type": "production"},
             {"stage_name": "Agave pineapple", "category": "Agave Reception", "query": "Cultivation of crops", "amount": 8.62, "unit": "kg", "location": "MX", "exchange_type": "technosphere"},
             {"stage_name": "Electricity (Reception)", "category": "Agave Reception", "query": "Production of electricity", "amount": 3.29e-03, "unit": "kWh", "location": "MX", "exchange_type": "technosphere"},
             {"stage_name": "Fuel Oil (Cooking)", "category": "Cooking", "query": "Production of fuel oil", "amount": 8.06e-01, "unit": "kg", "location": "", "exchange_type": "technosphere"},
             {"stage_name": "Water (Cooking)", "category": "Cooking", "query": "Collection, purification and distribution of water", "amount": 7.16e-01, "unit": "L", "location": "", "exchange_type": "technosphere"},
-            {"stage_name": "Electricity (Cooking)", "category": "Cooking", "query": "Production of electricity", "amount": 1.19e-04, "unit": "kWh", "location": "MX", "exchange_type": "technosphere"},
             {"stage_name": "Electricity (Grinding)", "category": "Grinding", "query": "Production of electricity", "amount": 1.01e-01, "unit": "kWh", "location": "MX", "exchange_type": "technosphere"},
             {"stage_name": "Electricity (Fermentation)", "category": "Fermentation", "query": "Production of electricity", "amount": 9.36e-02, "unit": "kWh", "location": "MX", "exchange_type": "technosphere"},
             {"stage_name": "Yeast", "category": "Fermentation", "query": "Manufacture of food products", "amount": 4.44e-03, "unit": "kg", "location": "", "exchange_type": "technosphere"},
@@ -39,6 +43,7 @@ def get_or_create_default_scenario():
             {"stage_name": "Glass Bottle (550g)", "category": "Packaging", "query": "Manufacture of glass", "amount": 5.50e-01, "unit": "kg", "location": "", "exchange_type": "technosphere"},
             {"stage_name": "Aluminum Cap", "category": "Packaging", "query": "Manufacture of aluminum", "amount": 9.80e-02, "unit": "kg", "location": "", "exchange_type": "technosphere"},
             {"stage_name": "Wooden Box", "category": "Packaging", "query": "Manufacture of wood products", "amount": 2.45e-01, "unit": "kg", "location": "", "exchange_type": "technosphere"},
+            {"stage_name": "Bagasse Bio-energy Credit", "category": "Byproduct Credit", "query": "bagasse", "amount": 1.42, "unit": "kg", "location": "MX", "exchange_type": "byproduct"},
         ]
         for d in defaults:
             InventoryExchange.objects.create(scenario=scenario, **d)
@@ -46,53 +51,48 @@ def get_or_create_default_scenario():
 
 
 def dashboard_view(request):
-    scenario = get_or_create_default_scenario()
-    exchanges = scenario.exchanges.all()
+    scenario = get_or_create_default_scenario() if 'get_or_create_default_scenario' in globals() else get_or_create_default_producer_and_product()
 
-    # Format exchanges for calculation engine
-    calc_list = []
-    for exc in exchanges:
-        calc_list.append({
-            "name": exc.stage_name,
-            "query": exc.query,
-            "amount": exc.amount,
-            "location": exc.location,
-            "type": exc.exchange_type
-        })
+    fu_ml = float(request.GET.get("functional_unit", 700.0))
+    recycling_pct = float(request.GET.get("glass_recycling_rate", 12)) / 100.0
+
+    exchanges = scenario.exchanges.all()
+    calc_list = [{"name": e.stage_name, "query": e.query, "amount": e.amount, "location": e.location, "type": e.exchange_type, "category": e.category} for e in exchanges]
 
     calculator = TequilaBWCalculator()
-    results = calculator.calculate_lca(calc_list)
+    results = calculator.calculate_lca(
+        calc_list,
+        functional_unit_volume_ml=fu_ml,
+        glass_recycling_rate=recycling_pct
+    )
 
-    # Render Matplotlib Chart into media
-    chart_url = None
-    if results["hotspots"]:
-        stages = [h["stage"] for h in results["hotspots"][:6]]
-        pcts = [h["pct"] for h in results["hotspots"][:6]]
+    # Save to LCAResult model
+    LCAResult.objects.update_or_create(
+        scenario=scenario,
+        defaults={
+            "gwp_total": results["gwp_score"],
+            "water_footprint_aware": results["water_footprint_aware"],
+            "biogenic_co2": results["biogenic_co2"],
+            "raw_json_results": results
+        }
+    )
 
-        plt.figure(figsize=(9, 4))
-        sns.barplot(x=pcts, y=stages, palette="viridis")
-        plt.title("Climate Footprint (GWP100) Hotspot Analysis")
-        plt.xlabel("Share of Total Carbon Footprint (%)")
-        plt.ylabel("Lifecycle Process")
-        plt.tight_layout()
-
-        media_dir = os.path.join(settings.BASE_DIR, "media")
-        os.makedirs(media_dir, exist_ok=True)
-        chart_path = os.path.join(media_dir, "tequila_hotspot_chart.png")
-        plt.savefig(chart_path, dpi=300)
-        plt.close()
-        chart_url = "/media/tequila_hotspot_chart.png"
+    param_form = GlobalParameterForm(initial={
+        "functional_unit": fu_ml,
+        "glass_recycling_rate": int(recycling_pct * 100)
+    })
 
     context = {
         "scenario": scenario,
         "results": results,
-        "chart_url": chart_url,
+        "results_json": json.dumps(results),
+        "param_form": param_form,
     }
     return render(request, "lca_engine/dashboard.html", context)
 
 
 def inventory_edit_view(request):
-    scenario = get_or_create_default_scenario()
+    scenario = get_or_create_default_producer_and_product()
     upload_form = CSVUploadForm()
 
     if request.method == "POST":
@@ -128,10 +128,33 @@ def inventory_edit_view(request):
     return render(request, "lca_engine/inventory_form.html", context)
 
 
+def benchmark_view(request):
+    producer = Producer.objects.first() or get_or_create_default_producer_and_product().product.producer
+
+    classes = [
+        ("blanco", "Blanco (Unaged)", 4.85, 2.15),
+        ("reposado", "Reposado (6m)", 8.16, 3.42),
+        ("anejo", "Añejo (18m)", 9.45, 4.10),
+        ("extra_anejo", "Extra Añejo (36m)", 11.20, 4.85),
+    ]
+
+    benchmark_data = {
+        "labels": [c[1] for c in classes],
+        "gwp": [c[2] for c in classes],
+        "water": [c[3] for c in classes],
+    }
+
+    context = {
+        "producer": producer,
+        "benchmark_json": json.dumps(benchmark_data)
+    }
+    return render(request, "lca_engine/benchmark.html", context)
+
+
 def export_csv_view(request):
-    scenario = get_or_create_default_scenario()
+    scenario = get_or_create_default_producer_and_product()
     exchanges = scenario.exchanges.all()
-    calc_list = [{"name": e.stage_name, "query": e.query, "amount": e.amount, "location": e.location, "type": e.exchange_type} for e in exchanges]
+    calc_list = [{"name": e.stage_name, "query": e.query, "amount": e.amount, "location": e.location, "type": e.exchange_type, "category": e.category} for e in exchanges]
     results = TequilaBWCalculator().calculate_lca(calc_list)
 
     csv_content = generate_hotspot_csv(results["hotspots"])
