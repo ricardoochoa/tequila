@@ -1,0 +1,95 @@
+{% extends "lca_engine/base.html" %}
+
+{% block title %}Dashboard | Tequila LCA Studio{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+        <h2 class="fw-bold">{{ scenario.name }}</h2>
+        <p class="text-muted mb-0">{{ scenario.description }}</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="{% url 'inventory_edit' %}" class="btn btn-primary">✏️ Edit Inventory</a>
+        <a href="{% url 'export_csv' %}" class="btn btn-success">📥 Export Results</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card p-3 stat-card">
+            <span class="text-muted small text-uppercase">Climate Footprint (GWP100)</span>
+            <h3 class="fw-bold text-primary my-1">
+                {% if results.gwp_score %}
+                    {{ results.gwp_score }} <small class="fs-6 text-muted">kg CO2-eq</small>
+                {% else %}
+                    N/A
+                {% endif %}
+            </h3>
+            <span class="small text-muted">Per Functional Unit (700ml bottle)</span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 stat-card" style="border-left-color: #198754;">
+            <span class="text-muted small text-uppercase">Bound Inventory Exchanges</span>
+            <h3 class="fw-bold text-success my-1">{{ results.bound_exchanges }}</h3>
+            <span class="small text-muted">Foreground & background inputs</span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 stat-card" style="border-left-color: #ffc107;">
+            <span class="text-muted small text-uppercase">Background DB Mode</span>
+            <h5 class="fw-bold text-dark my-1">
+                {% if results.has_exiobase %}
+                    <span class="badge bg-success">EXIOBASE 3 (Full Matrix)</span>
+                {% else %}
+                    <span class="badge bg-warning text-dark">Biosphere 3 + Empirical Fallbacks</span>
+                {% endif %}
+            </h5>
+            <span class="small text-muted">{{ results.db_mode }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card p-3 h-100">
+            <h5 class="fw-bold mb-3">Hotspot Breakdown Table</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Lifecycle Process Stage</th>
+                            <th class="text-end">GWP Contribution (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for h in results.hotspots %}
+                        <tr>
+                            <td>{{ h.stage }}</td>
+                            <td class="text-end fw-bold">{{ h.pct }}%</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-center text-muted">No LCIA calculations generated. Ensure background database is connected.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card p-3 h-100 text-center">
+            <h5 class="fw-bold mb-3 text-start">Carbon Footprint Visual Hotspots</h5>
+            {% if chart_url %}
+                <img src="{{ chart_url }}" class="img-fluid rounded" alt="Hotspot Chart">
+                <div class="mt-3 text-end">
+                    <a href="{{ chart_url }}" download class="btn btn-sm btn-outline-secondary">Download Chart PNG</a>
+                </div>
+            {% else %}
+                <div class="py-5 text-muted">Visual chart will render when LCA calculations complete.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

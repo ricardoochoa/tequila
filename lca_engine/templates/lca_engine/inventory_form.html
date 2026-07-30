@@ -1,0 +1,77 @@
+{% extends "lca_engine/base.html" %}
+
+{% block title %}Edit Inventory | Tequila LCA Studio{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+        <h2 class="fw-bold">Inventory Management</h2>
+        <p class="text-muted">Upload a bulk inventory CSV file or edit lifecycle exchanges manually below.</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">← Back to Dashboard</a>
+    </div>
+</div>
+
+<div class="card p-4 mb-4">
+    <h5 class="fw-bold mb-3">Bulk CSV Upload</h5>
+    <form method="post" enctype="multipart/form-data" class="row g-3">
+        {% csrf_token %}
+        <div class="col-md-8">
+            {{ upload_form.csv_file }}
+            <div class="form-text">CSV headers required: stage_name, category, query, amount, unit, location, exchange_type</div>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <button type="submit" name="upload_csv" class="btn btn-success">Upload & Process CSV</button>
+        </div>
+    </form>
+</div>
+
+<div class="card p-4">
+    <h5 class="fw-bold mb-3">Manual Inventory Formset Editor</h5>
+    <form method="post">
+        {% csrf_token %}
+        {{ formset.management_form }}
+        
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Stage Name</th>
+                        <th>Category</th>
+                        <th>DB Search Query</th>
+                        <th>Amount</th>
+                        <th>Unit</th>
+                        <th>Location</th>
+                        <th>Type</th>
+                        <th>Delete</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for form in formset %}
+                    <tr>
+                        {{ form.id }}
+                        <td>{{ form.stage_name }}</td>
+                        <td>{{ form.category }}</td>
+                        <td>{{ form.query }}</td>
+                        <td>{{ form.amount }}</td>
+                        <td>{{ form.unit }}</td>
+                        <td>{{ form.location }}</td>
+                        <td>{{ form.exchange_type }}</td>
+                        <td class="text-center">
+                            {% if form.instance.pk %}
+                                {{ form.DELETE }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-3 text-end">
+            <button type="submit" class="btn btn-primary px-4">Save & Recalculate LCA</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
