@@ -13,6 +13,16 @@ logger = logging.getLogger(__name__)
 _BW_LOCK = threading.Lock()
 
 
+def _hex_to_rgba(hex_str: str, alpha: float = 0.3) -> str:
+    hex_clean = hex_str.lstrip('#')
+    if len(hex_clean) == 6:
+        r = int(hex_clean[0:2], 16)
+        g = int(hex_clean[2:4], 16)
+        b = int(hex_clean[4:6], 16)
+        return f"rgba({r}, {g}, {b}, {alpha})"
+    return f"rgba(0, 242, 254, {alpha})"
+
+
 class TequilaBWCalculator:
     """
     Service wrapper for managing Brightway2 LCA calculations safely.
@@ -20,6 +30,132 @@ class TequilaBWCalculator:
 
     def __init__(self, project_name: str = "Tequila_LCA_Mexico"):
         self.project_name = project_name
+
+    def get_sankey_data(
+        self,
+        calc_list: List[Dict[str, Any]],
+        hotspots: List[Dict[str, Any]],
+        functional_unit_name: str = "Functional Product Output",
+        cutoff: float = 0.01,
+        score_key: str = "gwp_score"
+    ) -> Dict[str, Any]:
+        """
+        Generates dynamic Sankey diagram nodes and links for supply chain graph visualization.
+        Supports Brightway GraphTraversal when LCA object is available, with structured process flow fallback.
+        Converts UUID/activity nodes into sequential zero-indexed integers (source, target).
+        """
+        palette = [
+            "#00f2fe", "#4facfe", "#a18cd1", "#fbc2eb",
+            "#43e97b", "#38f9d7", "#f59e0b", "#ff0844", "#30cfd0"
+        ]
+
+        labels = []
+        colors = []
+        node_indices = {}
+
+        def get_or_add_node(name: str, color_idx: Optional[int] = None) -> int:
+            if name not in node_indices:
+                idx = len(labels)
+                node_indices[name] = idx
+                labels.append(name)
+                c = palette[idx % len(palette)] if color_idx is None else palette[color_idx % len(palette)]
+                colors.append(c)
+            return node_indices[name]
+
+        sources = []
+        targets = []
+        values = []
+        link_colors = []
+
+        gt_success = False
+
+        # Attempt GraphTraversal using Brightway2 if databases & methods are available
+        try:
+            import brightway2 as bw
+            import bw2analyzer as bwa
+            bw.projects.set_current(self.project_name)
+            fg_name = "Tequila_Foreground"
+            if fg_name in bw.databases:
+                fg_db = bw.Database(fg_name)
+                acts = [a for a in fg_db if a.get("unit") == "unit"]
+                if acts and bw.methods:
+                    method = list(bw.methods)[0]
+                    lca = bw.LCA({acts[0]: 1}, method)
+                    lca.lci()
+                    lca.lcia()
+                    gt = bwa.GraphTraversal()
+                    gt_results = gt.calculate(lca, cutoff=cutoff)
+                    if gt_results and "edges" in gt_results and gt_results["edges"]:
+                        bw_nodes = gt_results.get("nodes", {})
+                        for edge in gt_results["edges"]:
+                            src_key = edge.get("source") or edge.get("from")
+                            tgt_key = edge.get("target") or edge.get("to")
+                            val = abs(float(edge.get("amount", 0.0) or edge.get("impact", 0.0)))
+                            if val >= cutoff and src_key and tgt_key:
+                                src_name = bw_nodes.get(src_key, {}).get("name", str(src_key))
+                                tgt_name = bw_nodes.get(tgt_key, {}).get("name", str(tgt_key))
+                                src_idx = get_or_add_node(src_name)
+                                tgt_idx = get_or_add_node(tgt_name)
+                                sources.append(src_idx)
+                                targets.append(tgt_idx)
+                                values.append(round(val, 4))
+                                link_colors.append(_hex_to_rgba(colors[src_idx], 0.25))
+                        if sources:
+                            gt_success = True
+        except Exception as e:
+            logger.debug(f"GraphTraversal fallback active: {e}")
+
+        if not gt_success:
+            # Fallback dynamic supply chain graph: Process Stages -> Lifecycle Categories -> Functional Product Output
+            output_idx = get_or_add_node(functional_unit_name, color_idx=5)
+            
+            # Map exchanges by category
+            category_totals = {}
+            for item in calc_list:
+                exc_type = item.get("type", "technosphere")
+                if exc_type == "production":
+                    continue
+                stage_name = item.get("name", "Process Stage")
+                category = item.get("category", "General Process")
+                
+                # Match score from hotspots or estimate
+                score = 0.01
+                for h in hotspots:
+                    if h.get("stage") == stage_name or stage_name in h.get("stage", ""):
+                        val = h.get(score_key, h.get("gwp_score", h.get("water_score", 0.01)))
+                        score = abs(float(val))
+                        break
+                if score <= 0.0001:
+                    score = 0.01
+
+                stage_idx = get_or_add_node(stage_name)
+                cat_idx = get_or_add_node(category)
+
+                # Link: Stage -> Category
+                sources.append(stage_idx)
+                targets.append(cat_idx)
+                values.append(round(score, 4))
+                link_colors.append(_hex_to_rgba(colors[stage_idx], 0.25))
+
+                category_totals[cat_idx] = category_totals.get(cat_idx, 0.0) + score
+
+            # Link: Category -> Functional Product Output
+            for cat_idx, cat_sum in category_totals.items():
+                sources.append(cat_idx)
+                targets.append(output_idx)
+                values.append(round(max(0.01, cat_sum), 4))
+                link_colors.append(_hex_to_rgba(colors[cat_idx], 0.35))
+
+        return {
+            "labels": labels,
+            "colors": colors,
+            "links": {
+                "source": sources,
+                "target": targets,
+                "value": values,
+                "color": link_colors
+            }
+        }
 
     def calculate_lca(
         self,
@@ -190,6 +326,20 @@ class TequilaBWCalculator:
 
             db_mode = "EXIOBASE 3 + AWARE Water Model" if has_exio else "Biosphere 3 + AWARE Water & Fallbacks"
 
+            sankey_data = self.get_sankey_data(
+                exchanges_list,
+                hotspots,
+                functional_unit_name=f"{int(functional_unit_volume_ml)}ml Reposado Tequila Bottle",
+                score_key="gwp_score"
+            )
+
+            water_sankey_data = self.get_sankey_data(
+                exchanges_list,
+                water_hotspots,
+                functional_unit_name=f"{int(functional_unit_volume_ml)}ml Reposado Tequila Bottle",
+                score_key="water_score"
+            )
+
             return {
                 "project": self.project_name,
                 "bound_exchanges": bound_exchanges,
@@ -201,7 +351,9 @@ class TequilaBWCalculator:
                 "has_exiobase": has_exio,
                 "db_mode": db_mode,
                 "functional_unit_ml": functional_unit_volume_ml,
-                "glass_recycling_rate_pct": round(glass_recycling_rate * 100, 1)
+                "glass_recycling_rate_pct": round(glass_recycling_rate * 100, 1),
+                "sankey_data": sankey_data,
+                "water_sankey_data": water_sankey_data
             }
 
 

@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 6 CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Chart.js & Plotly CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -85,6 +87,13 @@
             gap: 0.75rem;
         }
 
+        .sidebar .nav-link i {
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+            transition: color 0.2s ease;
+        }
+
         .sidebar .nav-link:hover {
             color: #00f2fe;
             background: rgba(6, 182, 212, 0.1);
@@ -97,6 +106,10 @@
             border: 1px solid rgba(6, 182, 212, 0.4);
             font-weight: 600;
             box-shadow: 0 0 15px rgba(6, 182, 212, 0.15);
+        }
+
+        .sidebar .nav-link.active i {
+            color: #00f2fe;
         }
 
         /* Language Toggle */
@@ -217,25 +230,26 @@
     <aside class="sidebar">
         <div>
             <a class="sidebar-brand" href="{% url 'dashboard' %}">
-                <span class="fs-3">🌵</span>
+                <i class="fa-solid fa-seedling text-info fs-4"></i>
                 <span class="sidebar-brand-title">Tequila LCA</span>
             </a>
             
             <nav class="nav flex-column nav-pills mt-4">
                 <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
-                    <span>📊</span> <span data-i18n="nav_dashboard">Dashboard</span>
+                    <i class="fa-solid fa-chart-pie"></i> <span data-i18n="nav_dashboard">Dashboard</span>
                 </a>
                 <a class="nav-link {% if request.resolver_match.url_name == 'inventory_edit' %}active{% endif %}" href="{% url 'inventory_edit' %}">
-                    <span>✏️</span> <span data-i18n="nav_edit_inventory">Edit Inventory</span>
+                    <i class="fa-solid fa-pen-to-square"></i> <span data-i18n="nav_edit_inventory">Edit Inventory</span>
                 </a>
                 <a class="nav-link {% if request.resolver_match.url_name == 'benchmark' %}active{% endif %}" href="{% url 'benchmark' %}">
-                    <span>📈</span> <span data-i18n="nav_benchmark">Class Benchmark</span>
+                    <i class="fa-solid fa-chart-line"></i> <span data-i18n="nav_benchmark">Class Benchmark</span>
                 </a>
                 <a class="nav-link" href="{% url 'export_csv' %}">
-                    <span>📥</span> <span data-i18n="nav_download_csv">Download CSV</span>
+                    <i class="fa-solid fa-file-arrow-down"></i> <span data-i18n="nav_download_csv">Download CSV</span>
                 </a>
             </nav>
         </div>
+
 
         <div class="pt-3 border-top border-secondary border-opacity-25">
             <div class="d-flex align-items-center justify-content-between">
@@ -278,13 +292,19 @@
                 hotspot_table_title: "Hotspot Contribution Table",
                 col_process: "Lifecycle Process / Credit",
                 col_gwp: "GWP Impact (kg CO2-eq)",
-                col_share: "Share of Total (%)",
+                col_share: "GWP Share (%)",
+                col_water: "AWARE Water Impact (m3 world-eq)",
+                col_water_share: "Water Share (%)",
+                water_hotspot_title: "Interactive Water Hotspot Breakdown",
+                water_process_flow_title: "Water Process Flow",
+                water_sensitivity_title: "Water Sensitivity: Impact of Glass Recycling Rate",
+                water_sensitivity_subtitle: "Demonstrates how increasing recycled glass content reduces AWARE Water Footprint across classes.",
                 benchmark_title: "Tequila Class Comparative Benchmarking",
                 benchmark_subtitle: "Side-by-side Environmental Impact Comparison across Tequila Classes for",
                 back_dashboard: "← Back to Dashboard",
                 gwp_by_class: "Carbon Footprint (GWP100a) by Class",
                 water_by_class: "AWARE Water Footprint by Class",
-                sensitivity_title: "Sensitivity Curve: Impact of Glass Recycling Rate",
+                sensitivity_title: "Carbon Sensitivity: Impact of Glass Recycling Rate",
                 sensitivity_subtitle: "Demonstrates how increasing recycled glass content reduces GWP across classes with varying bottle weights.",
                 inventory_title: "Inventory Management",
                 inventory_subtitle: "Upload a bulk inventory CSV file or edit lifecycle exchanges manually below.",
@@ -294,6 +314,8 @@
                 edit_inventory_btn: "✏️ Edit Inventory",
                 class_benchmark_btn: "📊 Class Benchmark",
                 export_results_btn: "📥 Export Results",
+                control_panel_title: "Scenario Control Panel",
+                recalc_required: "⚠️ Recalculation Required",
                 upload_process_btn: "Upload & Process CSV"
             },
             es: {
@@ -315,13 +337,19 @@
                 hotspot_table_title: "Tabla de Contribución por Proceso",
                 col_process: "Proceso / Crédito del Ciclo de Vida",
                 col_gwp: "Impacto GWP (kg CO2-eq)",
-                col_share: "Porcentaje del Total (%)",
+                col_share: "Porcentaje de GWP (%)",
+                col_water: "Impacto de Agua AWARE (m3 world-eq)",
+                col_water_share: "Porcentaje de Agua (%)",
+                water_hotspot_title: "Desglose Interactivo de Agua",
+                water_process_flow_title: "Flujo del Proceso de Agua",
+                water_sensitivity_title: "Sensibilidad de Agua: Impacto del Reciclaje de Vidrio",
+                water_sensitivity_subtitle: "Demuestra cómo aumentar el contenido de vidrio reciclado reduce la Huella Hídrica AWARE en clases.",
                 benchmark_title: "Comparativa Ambiental por Clase de Tequila",
                 benchmark_subtitle: "Comparación directa de impacto ambiental entre clases de tequila para",
                 back_dashboard: "← Volver al Panel",
                 gwp_by_class: "Huella de Carbono (GWP100a) por Clase",
                 water_by_class: "Huella Hídrica AWARE por Clase",
-                sensitivity_title: "Curva de Sensibilidad: Impacto del Reciclaje de Vidrio",
+                sensitivity_title: "Sensibilidad de Carbono: Impacto del Reciclaje de Vidrio",
                 sensitivity_subtitle: "Demuestra cómo aumentar el contenido de vidrio reciclado reduce el GWP en clases con distintos pesos de botella.",
                 inventory_title: "Gestión de Inventario",
                 inventory_subtitle: "Suba un archivo CSV de inventario o edite los intercambios del ciclo de vida manualmente a continuación.",

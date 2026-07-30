@@ -4,23 +4,23 @@
 
 {% block content %}
 <div class="row mb-4 align-items-center">
-    <div class="col-md-7">
+    <div class="col-12">
         <h2 class="fw-bold text-white mb-1">{{ scenario.product.name|default:scenario.name }}</h2>
         <p class="text-muted mb-0">
             <span data-i18n="producer">Producer</span>: <strong class="text-light">{{ scenario.product.producer.name|default:"Destilería Los Altos" }}</strong> | 
             <span data-i18n="class">Class</span>: <span class="text-light">{{ scenario.product.get_tequila_class_display|default:"Reposado" }}</span>
         </p>
     </div>
-    <div class="col-md-5 text-md-end mt-3 mt-md-0">
-        <a href="{% url 'inventory_edit' %}" class="btn btn-outline-info me-2" data-i18n="edit_inventory_btn">✏️ Edit Inventory</a>
-        <a href="{% url 'benchmark' %}" class="btn btn-outline-light me-2" data-i18n="class_benchmark_btn">📊 Class Benchmark</a>
-        <a href="{% url 'export_csv' %}" class="btn btn-success" data-i18n="export_results_btn">📥 Export Results</a>
-    </div>
 </div>
 
+
 <!-- Global Scenario Parameters Form -->
-<div class="card p-4 mb-4">
-    <form method="get" class="row g-3 align-items-center">
+<div class="card p-4 mb-4" id="control-panel-card">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h5 class="fw-bold text-white mb-0" data-i18n="control_panel_title">Scenario Control Panel</h5>
+        <span id="recalc-badge" class="badge bg-warning text-dark d-none px-3 py-2 fw-bold animate-fade" data-i18n="recalc_required">⚠️ Recalculation Required</span>
+    </div>
+    <form method="get" id="scenario-form" class="row g-3 align-items-center">
         <div class="col-md-5">
             <label class="form-label fw-bold small text-uppercase text-muted" data-i18n="functional_unit">Functional Unit Volume</label>
             {{ param_form.functional_unit }}
@@ -71,19 +71,37 @@
 </div>
 
 <div class="row g-4 mb-4">
-    <!-- Chart.js Interactive Hotspots -->
+    <!-- Chart.js Carbon Hotspots -->
     <div class="col-lg-6">
-        <div class="card p-3 h-100">
-            <h5 class="fw-bold mb-3 text-white" data-i18n="hotspot_title">Interactive Hotspot Breakdown</h5>
+        <div class="card p-3 h-100 chart-container-card">
+            <h5 class="fw-bold mb-3 text-white" data-i18n="hotspot_title">Interactive Carbon Hotspot Breakdown</h5>
             <canvas id="hotspotChart" height="220"></canvas>
         </div>
     </div>
 
-    <!-- Plotly.js Process Flow Sankey Diagram -->
+    <!-- Chart.js Water Hotspots -->
     <div class="col-lg-6">
-        <div class="card p-3 h-100">
-            <h5 class="fw-bold mb-3 text-white" data-i18n="process_flow_title">Lifecycle Process Flow</h5>
+        <div class="card p-3 h-100 chart-container-card">
+            <h5 class="fw-bold mb-3 text-white" data-i18n="water_hotspot_title">Interactive Water Hotspot Breakdown</h5>
+            <canvas id="waterHotspotChart" height="220"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Plotly.js Carbon Flow Sankey Diagram -->
+    <div class="col-lg-6">
+        <div class="card p-3 h-100 chart-container-card">
+            <h5 class="fw-bold mb-3 text-white" data-i18n="process_flow_title">Lifecycle Process Flow (GWP)</h5>
             <div id="sankeyDiagram" style="height: 250px;"></div>
+        </div>
+    </div>
+
+    <!-- Plotly.js Water Flow Sankey Diagram -->
+    <div class="col-lg-6">
+        <div class="card p-3 h-100 chart-container-card">
+            <h5 class="fw-bold mb-3 text-white" data-i18n="water_process_flow_title">Water Process Flow (AWARE)</h5>
+            <div id="waterSankeyDiagram" style="height: 250px;"></div>
         </div>
     </div>
 </div>
@@ -96,19 +114,23 @@
                 <tr>
                     <th data-i18n="col_process">Lifecycle Process / Credit</th>
                     <th class="text-end" data-i18n="col_gwp">GWP Impact (kg CO2-eq)</th>
-                    <th class="text-end" data-i18n="col_share">Share of Total (%)</th>
+                    <th class="text-end" data-i18n="col_share">GWP Share (%)</th>
+                    <th class="text-end" data-i18n="col_water">AWARE Water Impact (m3 world-eq)</th>
+                    <th class="text-end" data-i18n="col_water_share">Water Share (%)</th>
                 </tr>
             </thead>
             <tbody>
-                {% for h in results.hotspots %}
+                {% for h in combined_hotspots %}
                 <tr>
                     <td>{{ h.stage }}</td>
                     <td class="text-end {% if h.gwp_score < 0 %}text-success fw-bold{% endif %}">{{ h.gwp_score }}</td>
-                    <td class="text-end fw-bold" style="color: #00f2fe;">{{ h.pct }}%</td>
+                    <td class="text-end fw-bold" style="color: #00f2fe;">{{ h.gwp_pct }}%</td>
+                    <td class="text-end {% if h.water_score < 0 %}text-success fw-bold{% endif %}">{{ h.water_score }}</td>
+                    <td class="text-end fw-bold" style="color: #38f9d7;">{{ h.water_pct }}%</td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="3" class="text-center text-muted">No inventory exchanges found.</td>
+                    <td colspan="5" class="text-center text-muted">No inventory exchanges found.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -125,18 +147,31 @@
     document.addEventListener("DOMContentLoaded", function() {
         const rawData = JSON.parse(document.getElementById("lca-results-data").textContent);
 
-        // Render Chart.js Hotspot Bar Chart with Neon Palette & Dark Gridlines
-        const stages = rawData.hotspots.slice(0, 6).map(h => h.stage);
-        const pcts = rawData.hotspots.slice(0, 6).map(h => h.pct);
+        // Stateful UX-3 Feedback: Listen to input changes in Control Panel
+        const formInputs = document.querySelectorAll("#scenario-form input, #scenario-form select");
+        const recalcBadge = document.getElementById("recalc-badge");
+        const chartCards = document.querySelectorAll(".chart-container-card");
 
-        const ctx = document.getElementById('hotspotChart').getContext('2d');
-        
-        // Gradient fill for bars
-        const cyanGradient = ctx.createLinearGradient(0, 0, 400, 0);
+        formInputs.forEach(input => {
+            input.addEventListener("input", function() {
+                if (recalcBadge) recalcBadge.classList.remove("d-none");
+                chartCards.forEach(c => {
+                    c.style.opacity = "0.75";
+                    c.style.border = "1px dashed #f59e0b";
+                });
+            });
+        });
+
+        // 1. Render Chart.js GWP Carbon Hotspot Bar Chart
+        const stages = (rawData.hotspots || []).slice(0, 6).map(h => h.stage);
+        const pcts = (rawData.hotspots || []).slice(0, 6).map(h => h.pct);
+
+        const ctxGwp = document.getElementById('hotspotChart').getContext('2d');
+        const cyanGradient = ctxGwp.createLinearGradient(0, 0, 400, 0);
         cyanGradient.addColorStop(0, '#00f2fe');
         cyanGradient.addColorStop(1, '#4facfe');
 
-        new Chart(ctx, {
+        new Chart(ctxGwp, {
             type: 'bar',
             data: {
                 labels: stages,
@@ -175,7 +210,65 @@
             }
         });
 
-        // Render Plotly.js Process Flow Sankey Diagram with Dark Mode Neon Theme
+        // 2. Render Chart.js AWARE Water Hotspot Bar Chart
+        const waterStages = (rawData.water_hotspots || []).slice(0, 6).map(wh => wh.stage);
+        const waterPcts = (rawData.water_hotspots || []).slice(0, 6).map(wh => wh.pct);
+
+        const ctxWater = document.getElementById('waterHotspotChart').getContext('2d');
+        const greenGradient = ctxWater.createLinearGradient(0, 0, 400, 0);
+        greenGradient.addColorStop(0, '#38f9d7');
+        greenGradient.addColorStop(1, '#43e97b');
+
+        new Chart(ctxWater, {
+            type: 'bar',
+            data: {
+                labels: waterStages,
+                datasets: [{
+                    label: 'Water Contribution (%)',
+                    data: waterPcts,
+                    backgroundColor: greenGradient,
+                    borderColor: '#38f9d7',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleColor: '#ffffff',
+                        bodyColor: '#38f9d7',
+                        borderColor: '#334155',
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#94a3b8' }
+                    }
+                }
+            }
+        });
+
+        // 3. Render Plotly.js Dynamic GWP Process Flow Sankey Diagram
+        const sankeyPayload = rawData.sankey_data || {};
+        const labels = (sankeyPayload.labels && sankeyPayload.labels.length) ? sankeyPayload.labels : ["Agave Cultivation", "Cooking & Grinding", "Fermentation", "Distillation", "Packaging", "Functional Product Output"];
+        const colors = (sankeyPayload.colors && sankeyPayload.colors.length) ? sankeyPayload.colors : ["#00f2fe", "#4facfe", "#a18cd1", "#fbc2eb", "#43e97b", "#38f9d7"];
+        const links = (sankeyPayload.links && sankeyPayload.links.source) ? sankeyPayload.links : {
+            source: [0, 1, 2, 3, 4],
+            target: [1, 2, 3, 5, 5],
+            value:  [3.01, 2.51, 0.12, 1.20, 1.32],
+            color: ["rgba(0, 242, 254, 0.25)", "rgba(79, 172, 254, 0.25)", "rgba(161, 140, 209, 0.25)", "rgba(251, 194, 235, 0.25)", "rgba(67, 233, 123, 0.25)"]
+        };
+
         const sankeyData = [{
             type: "sankey",
             orientation: "h",
@@ -183,14 +276,14 @@
                 pad: 15,
                 thickness: 20,
                 line: { color: "#ffffff", width: 0.5 },
-                label: ["Agave Cultivation", "Cooking & Grinding", "Fermentation", "Distillation", "Packaging", "Functional Product Output"],
-                color: ["#00f2fe", "#4facfe", "#a18cd1", "#fbc2eb", "#43e97b", "#38f9d7"]
+                label: labels,
+                color: colors
             },
             link: {
-                source: [0, 1, 2, 3, 4],
-                target: [1, 2, 3, 5, 5],
-                value:  [3.01, 2.51, 0.12, 1.20, 1.32],
-                color: ["rgba(0, 242, 254, 0.25)", "rgba(79, 172, 254, 0.25)", "rgba(161, 140, 209, 0.25)", "rgba(251, 194, 235, 0.25)", "rgba(67, 233, 123, 0.25)"]
+                source: links.source,
+                target: links.target,
+                value:  links.value,
+                color:  links.color
             }
         }];
         const sankeyLayout = { 
@@ -199,7 +292,64 @@
             plot_bgcolor: 'rgba(0,0,0,0)',
             font: { color: '#ffffff', family: 'Inter, sans-serif' }
         };
-        Plotly.newPlot('sankeyDiagram', sankeyData, sankeyLayout, {responsive: true, displayModeBar: false});
+        const sankeyDiv = document.getElementById('sankeyDiagram');
+        Plotly.newPlot(sankeyDiv, sankeyData, sankeyLayout, {responsive: true, displayModeBar: false});
+
+        // 4. Render Plotly.js Dynamic Water Process Flow Sankey Diagram
+        const waterSankeyPayload = rawData.water_sankey_data || rawData.sankey_data || {};
+        const wLabels = (waterSankeyPayload.labels && waterSankeyPayload.labels.length) ? waterSankeyPayload.labels : labels;
+        const wColors = (waterSankeyPayload.colors && waterSankeyPayload.colors.length) ? waterSankeyPayload.colors.map(c => "#38f9d7") : colors;
+        const wLinks = (waterSankeyPayload.links && waterSankeyPayload.links.source) ? waterSankeyPayload.links : links;
+
+        const waterSankeyData = [{
+            type: "sankey",
+            orientation: "h",
+            node: {
+                pad: 15,
+                thickness: 20,
+                line: { color: "#ffffff", width: 0.5 },
+                label: wLabels,
+                color: wColors
+            },
+            link: {
+                source: wLinks.source,
+                target: wLinks.target,
+                value:  wLinks.value,
+                color:  wLinks.color
+            }
+        }];
+        const waterSankeyDiv = document.getElementById('waterSankeyDiagram');
+        Plotly.newPlot(waterSankeyDiv, waterSankeyData, sankeyLayout, {responsive: true, displayModeBar: false});
+
+        // Interactive Drill-down Event Listeners
+        [sankeyDiv, waterSankeyDiv].forEach(div => {
+            if (div && div.on) {
+                div.on('plotly_click', function(data) {
+                    if (data && data.points && data.points.length > 0) {
+                        const point = data.points[0];
+                        let detailMsg = "";
+                        if (point.pointNumber !== undefined && labels[point.pointNumber]) {
+                            detailMsg = `Node: ${labels[point.pointNumber]}`;
+                        } else if (point.source && point.target) {
+                            detailMsg = `Flow: ${point.source.label} ➔ ${point.target.label} (${point.value} impact score)`;
+                        }
+                        if (detailMsg) {
+                            let toast = document.getElementById("sankey-toast");
+                            if (!toast) {
+                                toast = document.createElement("div");
+                                toast.id = "sankey-toast";
+                                toast.className = "alert alert-info alert-dismissible fade show mt-2 mb-0 py-2 px-3 small";
+                                toast.style.background = "rgba(15, 23, 42, 0.9)";
+                                toast.style.borderColor = "#00f2fe";
+                                toast.style.color = "#00f2fe";
+                                div.parentNode.appendChild(toast);
+                            }
+                            toast.innerHTML = `<strong>🔍 Supply Chain Drill-down:</strong> ${detailMsg} <button type="button" class="btn-close btn-close-white py-2" data-bs-dismiss="alert"></button>`;
+                        }
+                    }
+                });
+            }
+        });
     });
 </script>
 {% endblock %}

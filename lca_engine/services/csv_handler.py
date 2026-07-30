@@ -4,7 +4,7 @@ CSV parser and export utilities for LCA inventory and calculation results.
 
 import io
 import pandas as pd
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 
 DEFAULT_INVENTORY_CSV_HEADERS = ["stage_name", "category", "query", "amount", "unit", "location", "exchange_type"]
@@ -32,11 +32,53 @@ def parse_inventory_csv(file_obj) -> List[Dict[str, Any]]:
     return exchanges
 
 
-def generate_hotspot_csv(hotspots: List[Dict[str, Any]]) -> str:
+def generate_hotspot_csv(
+    hotspots: List[Dict[str, Any]],
+    water_hotspots: Optional[List[Dict[str, Any]]] = None
+) -> str:
     """
-    Generates CSV string output for hotspot results.
+    Generates CSV string output combining GWP and Water hotspot results.
     """
-    df = pd.DataFrame(hotspots)
-    if not df.empty:
-        df.columns = ["Lifecycle Stage", "Absolute GWP (kg CO2-eq)", "Percentage Contribution (%)"]
+    water_lookup = {}
+    if water_hotspots:
+        for wh in water_hotspots:
+            water_lookup[wh.get("stage")] = wh
+
+    merged_data = []
+    seen_stages = set()
+
+    for h in hotspots:
+        stage = h.get("stage", "")
+        seen_stages.add(stage)
+        wh = water_lookup.get(stage, {})
+        merged_data.append({
+            "Lifecycle Stage": stage,
+            "Absolute GWP (kg CO2-eq)": h.get("gwp_score", 0.0),
+            "GWP Contribution (%)": h.get("pct", 0.0),
+            "AWARE Water (m3 world-eq)": wh.get("water_score", 0.0),
+            "Water Contribution (%)": wh.get("pct", 0.0),
+        })
+
+    if water_hotspots:
+        for wh in water_hotspots:
+            stage = wh.get("stage", "")
+            if stage not in seen_stages:
+                merged_data.append({
+                    "Lifecycle Stage": stage,
+                    "Absolute GWP (kg CO2-eq)": 0.0,
+                    "GWP Contribution (%)": 0.0,
+                    "AWARE Water (m3 world-eq)": wh.get("water_score", 0.0),
+                    "Water Contribution (%)": wh.get("pct", 0.0),
+                })
+
+    df = pd.DataFrame(merged_data)
+    if df.empty:
+        df = pd.DataFrame(columns=[
+            "Lifecycle Stage",
+            "Absolute GWP (kg CO2-eq)",
+            "GWP Contribution (%)",
+            "AWARE Water (m3 world-eq)",
+            "Water Contribution (%)"
+        ])
     return df.to_csv(index=False)
+

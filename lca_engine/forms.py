@@ -8,10 +8,22 @@ from .models import InventoryScenario, InventoryExchange
 
 
 class CSVUploadForm(forms.Form):
+    UPLOAD_MODES = (
+        ("replace", "Replace existing inventory"),
+        ("append", "Append to existing inventory"),
+    )
+
     csv_file = forms.FileField(
         label="Upload Inventory CSV",
         help_text="Select a CSV file with columns: stage_name, category, query, amount, unit, location, exchange_type"
     )
+    upload_mode = forms.ChoiceField(
+        choices=UPLOAD_MODES,
+        initial="replace",
+        widget=forms.RadioSelect(attrs={"class": "form-check-input"}),
+        label="Upload Mode"
+    )
+
 
 
 class InventoryExchangeForm(forms.ModelForm):

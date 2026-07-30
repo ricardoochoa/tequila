@@ -51,7 +51,7 @@ def get_or_create_default_producer_and_product():
 
 
 def dashboard_view(request):
-    scenario = get_or_create_default_scenario() if 'get_or_create_default_scenario' in globals() else get_or_create_default_producer_and_product()
+    scenario = get_or_create_default_producer_and_product()
 
     fu_ml = float(request.GET.get("functional_unit", 700.0))
     recycling_pct = float(request.GET.get("glass_recycling_rate", 12)) / 100.0
@@ -82,11 +82,38 @@ def dashboard_view(request):
         "glass_recycling_rate": int(recycling_pct * 100)
     })
 
+    # Generate combined hotspots list for side-by-side table display
+    water_dict = {wh["stage"]: wh for wh in results.get("water_hotspots", [])}
+    combined_hotspots = []
+    seen_stages = set()
+    for h in results.get("hotspots", []):
+        stage = h["stage"]
+        seen_stages.add(stage)
+        wh = water_dict.get(stage, {})
+        combined_hotspots.append({
+            "stage": stage,
+            "gwp_score": h.get("gwp_score", 0.0),
+            "gwp_pct": h.get("pct", 0.0),
+            "water_score": wh.get("water_score", 0.0),
+            "water_pct": wh.get("pct", 0.0),
+        })
+    for wh in results.get("water_hotspots", []):
+        stage = wh["stage"]
+        if stage not in seen_stages:
+            combined_hotspots.append({
+                "stage": stage,
+                "gwp_score": 0.0,
+                "gwp_pct": 0.0,
+                "water_score": wh.get("water_score", 0.0),
+                "water_pct": wh.get("pct", 0.0),
+            })
+
     context = {
         "scenario": scenario,
         "results": results,
         "results_json": json.dumps(results),
         "param_form": param_form,
+        "combined_hotspots": combined_hotspots,
     }
     return render(request, "lca_engine/dashboard.html", context)
 
@@ -99,8 +126,12 @@ def inventory_edit_view(request):
         if "upload_csv" in request.POST:
             upload_form = CSVUploadForm(request.POST, request.FILES)
             if upload_form.is_valid():
+                upload_mode = upload_form.cleaned_data.get("upload_mode", "replace")
                 parsed_exchanges = parse_inventory_csv(request.FILES["csv_file"])
-                scenario.exchanges.all().delete()
+                
+                if upload_mode == "replace":
+                    scenario.exchanges.all().delete()
+
                 for item in parsed_exchanges:
                     InventoryExchange.objects.create(
                         scenario=scenario,
@@ -129,19 +160,39 @@ def inventory_edit_view(request):
 
 
 def benchmark_view(request):
-    producer = Producer.objects.first() or get_or_create_default_producer_and_product().product.producer
+    scenario = get_or_create_default_producer_and_product()
+    producer = Producer.objects.first() or scenario.product.producer
 
-    classes = [
+    class_configs = [
         ("blanco", "Blanco (Unaged)", 4.85, 2.15),
         ("reposado", "Reposado (6m)", 8.16, 3.42),
         ("anejo", "Añejo (18m)", 9.45, 4.10),
         ("extra_anejo", "Extra Añejo (36m)", 11.20, 4.85),
     ]
 
+    labels = []
+    gwp_values = []
+    water_values = []
+
+    for key, display_name, fallback_gwp, fallback_water in class_configs:
+        labels.append(display_name)
+        product = Product.objects.filter(tequila_class=key).first()
+        gwp = fallback_gwp
+        water = fallback_water
+        if product:
+            p_scenario = product.scenarios.first()
+            if p_scenario:
+                lca_res = LCAResult.objects.filter(scenario=p_scenario).first()
+                if lca_res:
+                    gwp = float(lca_res.gwp_total)
+                    water = float(lca_res.water_footprint_aware)
+        gwp_values.append(gwp)
+        water_values.append(water)
+
     benchmark_data = {
-        "labels": [c[1] for c in classes],
-        "gwp": [c[2] for c in classes],
-        "water": [c[3] for c in classes],
+        "labels": labels,
+        "gwp": gwp_values,
+        "water": water_values,
     }
 
     context = {
@@ -151,13 +202,14 @@ def benchmark_view(request):
     return render(request, "lca_engine/benchmark.html", context)
 
 
+
 def export_csv_view(request):
     scenario = get_or_create_default_producer_and_product()
     exchanges = scenario.exchanges.all()
     calc_list = [{"name": e.stage_name, "query": e.query, "amount": e.amount, "location": e.location, "type": e.exchange_type, "category": e.category} for e in exchanges]
     results = TequilaBWCalculator().calculate_lca(calc_list)
 
-    csv_content = generate_hotspot_csv(results["hotspots"])
+    csv_content = generate_hotspot_csv(results["hotspots"], results.get("water_hotspots"))
     response = HttpResponse(csv_content, content_type="text/csv")
-    response["Content-Disposition"] = 'attachment; filename="tequila_gwp_process_contribution.csv"'
+    response["Content-Disposition"] = 'attachment; filename="tequila_lca_hotspots_summary.csv"'
     return response

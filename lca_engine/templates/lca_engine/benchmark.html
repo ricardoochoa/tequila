@@ -31,10 +31,21 @@
     </div>
 </div>
 
-<div class="card p-4">
-    <h5 class="fw-bold mb-1 text-white" data-i18n="sensitivity_title">Sensitivity Curve: Impact of Glass Recycling Rate</h5>
-    <p class="text-muted small mb-3" data-i18n="sensitivity_subtitle">Demonstrates how increasing recycled glass content reduces GWP across classes with varying bottle weights.</p>
-    <canvas id="sensitivityChart" height="130"></canvas>
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card p-4 h-100">
+            <h5 class="fw-bold mb-1 text-white" data-i18n="sensitivity_title">Carbon Sensitivity: Impact of Glass Recycling Rate</h5>
+            <p class="text-muted small mb-3" data-i18n="sensitivity_subtitle">Demonstrates how increasing recycled glass content reduces GWP across classes with varying bottle weights.</p>
+            <canvas id="sensitivityChart" height="200"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card p-4 h-100">
+            <h5 class="fw-bold mb-1 text-white" data-i18n="water_sensitivity_title">Water Sensitivity: Impact of Glass Recycling Rate</h5>
+            <p class="text-muted small mb-3" data-i18n="water_sensitivity_subtitle">Demonstrates how increasing recycled glass content reduces AWARE Water Footprint across classes.</p>
+            <canvas id="waterSensitivityChart" height="200"></canvas>
+        </div>
+    </div>
 </div>
 
 <script id="benchmark-data" type="application/json">
@@ -45,17 +56,6 @@
     document.addEventListener("DOMContentLoaded", function() {
         const benchData = JSON.parse(document.getElementById("benchmark-data").textContent);
 
-        const darkScalesConfig = {
-            x: {
-                grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                ticks: { color: '#94a3b8' }
-            },
-            y: {
-                grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                ticks: { color: '#94a3b8' }
-            }
-        };
-
         const darkTooltipConfig = {
             backgroundColor: '#1e293b',
             titleColor: '#ffffff',
@@ -64,7 +64,15 @@
             borderWidth: 1
         };
 
-        // GWP Benchmark Bar Chart with Cyan-Pink Neon Palette
+        const waterTooltipConfig = {
+            backgroundColor: '#1e293b',
+            titleColor: '#ffffff',
+            bodyColor: '#38f9d7',
+            borderColor: '#334155',
+            borderWidth: 1
+        };
+
+        // GWP Benchmark Bar Chart with Cyan-Pink Neon Palette & Explicit Y Axis Title (UI-1)
         new Chart(document.getElementById('gwpBenchmarkChart').getContext('2d'), {
             type: 'bar',
             data: {
@@ -84,11 +92,21 @@
                     legend: { display: false },
                     tooltip: darkTooltipConfig
                 },
-                scales: darkScalesConfig
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#94a3b8' },
+                        title: { display: true, text: 'kg CO2-eq per bottle', color: '#94a3b8', font: { family: 'Inter, sans-serif' } }
+                    }
+                }
             }
         });
 
-        // Water Benchmark Bar Chart with Green-Cyan Neon Palette
+        // Water Benchmark Bar Chart with Green-Cyan Neon Palette & Explicit Y Axis Title (UI-1)
         new Chart(document.getElementById('waterBenchmarkChart').getContext('2d'), {
             type: 'bar',
             data: {
@@ -106,13 +124,23 @@
                 responsive: true, 
                 plugins: { 
                     legend: { display: false },
-                    tooltip: darkTooltipConfig
+                    tooltip: waterTooltipConfig
                 },
-                scales: darkScalesConfig
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#94a3b8' },
+                        title: { display: true, text: 'm3 world-eq per bottle', color: '#94a3b8', font: { family: 'Inter, sans-serif' } }
+                    }
+                }
             }
         });
 
-        // Sensitivity Line Chart with Neon Line Accents
+        // Carbon Sensitivity Line Chart
         new Chart(document.getElementById('sensitivityChart').getContext('2d'), {
             type: 'line',
             data: {
@@ -132,10 +160,55 @@
                     },
                     tooltip: darkTooltipConfig
                 },
-                scales: darkScalesConfig
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#94a3b8' },
+                        title: { display: true, text: 'kg CO2-eq per bottle', color: '#94a3b8', font: { family: 'Inter, sans-serif' } }
+                    }
+                }
+            }
+        });
+
+        // Water Sensitivity Line Chart
+        new Chart(document.getElementById('waterSensitivityChart').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: ['0% Recycled', '25% Recycled', '50% Recycled', '75% Recycled', '100% Recycled'],
+                datasets: [
+                    { label: 'Blanco', data: [2.15, 2.09, 2.03, 1.97, 1.91], borderColor: '#38f9d7', backgroundColor: '#38f9d7', borderWidth: 2.5, tension: 0.2, fill: false },
+                    { label: 'Reposado', data: [3.42, 3.32, 3.22, 3.12, 3.02], borderColor: '#43e97b', backgroundColor: '#43e97b', borderWidth: 2.5, tension: 0.2, fill: false },
+                    { label: 'Añejo', data: [4.10, 3.98, 3.86, 3.74, 3.62], borderColor: '#4facfe', backgroundColor: '#4facfe', borderWidth: 2.5, tension: 0.2, fill: false },
+                    { label: 'Extra Añejo', data: [4.85, 4.71, 4.57, 4.43, 4.29], borderColor: '#00f2fe', backgroundColor: '#00f2fe', borderWidth: 2.5, tension: 0.2, fill: false }
+                ]
+            },
+            options: { 
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: { color: '#f8fafc', font: { family: 'Inter, sans-serif' } }
+                    },
+                    tooltip: waterTooltipConfig
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#94a3b8' },
+                        title: { display: true, text: 'm3 world-eq per bottle', color: '#94a3b8', font: { family: 'Inter, sans-serif' } }
+                    }
+                }
             }
         });
     });
 </script>
 {% endblock %}
+
 
