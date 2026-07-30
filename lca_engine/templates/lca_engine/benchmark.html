@@ -5,33 +5,36 @@
 {% block content %}
 <div class="row mb-4 align-items-center">
     <div class="col-md-8">
-        <h2 class="fw-bold">Tequila Class Comparative Benchmarking</h2>
-        <p class="text-muted">Side-by-side Environmental Impact Comparison across Tequila Classes for <strong>{{ producer.name }}</strong></p>
+        <h2 class="fw-bold text-white mb-1" data-i18n="benchmark_title">Tequila Class Comparative Benchmarking</h2>
+        <p class="text-muted mb-0">
+            <span data-i18n="benchmark_subtitle">Side-by-side Environmental Impact Comparison across Tequila Classes for</span> 
+            <strong class="text-light">{{ producer.name }}</strong>
+        </p>
     </div>
-    <div class="col-md-4 text-md-end">
-        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">← Back to Dashboard</a>
+    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-light" data-i18n="back_dashboard">← Back to Dashboard</a>
     </div>
 </div>
 
 <div class="row g-4 mb-4">
     <div class="col-lg-6">
-        <div class="card p-3 h-100">
-            <h5 class="fw-bold mb-3">Carbon Footprint (GWP100a) by Class</h5>
+        <div class="card p-4 h-100">
+            <h5 class="fw-bold mb-3 text-white" data-i18n="gwp_by_class">Carbon Footprint (GWP100a) by Class</h5>
             <canvas id="gwpBenchmarkChart" height="220"></canvas>
         </div>
     </div>
     <div class="col-lg-6">
-        <div class="card p-3 h-100">
-            <h5 class="fw-bold mb-3">AWARE Water Footprint by Class</h5>
+        <div class="card p-4 h-100">
+            <h5 class="fw-bold mb-3 text-white" data-i18n="water_by_class">AWARE Water Footprint by Class</h5>
             <canvas id="waterBenchmarkChart" height="220"></canvas>
         </div>
     </div>
 </div>
 
 <div class="card p-4">
-    <h5 class="fw-bold mb-3">Sensitivity Curve: Impact of Glass Recycling Rate</h5>
-    <p class="text-muted small">Demonstrates how increasing recycled glass content reduces GWP across classes with varying bottle weights.</p>
-    <canvas id="sensitivityChart" height="150"></canvas>
+    <h5 class="fw-bold mb-1 text-white" data-i18n="sensitivity_title">Sensitivity Curve: Impact of Glass Recycling Rate</h5>
+    <p class="text-muted small mb-3" data-i18n="sensitivity_subtitle">Demonstrates how increasing recycled glass content reduces GWP across classes with varying bottle weights.</p>
+    <canvas id="sensitivityChart" height="130"></canvas>
 </div>
 
 <script id="benchmark-data" type="application/json">
@@ -42,7 +45,26 @@
     document.addEventListener("DOMContentLoaded", function() {
         const benchData = JSON.parse(document.getElementById("benchmark-data").textContent);
 
-        // GWP Benchmark Bar Chart
+        const darkScalesConfig = {
+            x: {
+                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                ticks: { color: '#94a3b8' }
+            },
+            y: {
+                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                ticks: { color: '#94a3b8' }
+            }
+        };
+
+        const darkTooltipConfig = {
+            backgroundColor: '#1e293b',
+            titleColor: '#ffffff',
+            bodyColor: '#00f2fe',
+            borderColor: '#334155',
+            borderWidth: 1
+        };
+
+        // GWP Benchmark Bar Chart with Cyan-Pink Neon Palette
         new Chart(document.getElementById('gwpBenchmarkChart').getContext('2d'), {
             type: 'bar',
             data: {
@@ -50,13 +72,23 @@
                 datasets: [{
                     label: 'Climate Footprint (kg CO2-eq)',
                     data: benchData.gwp,
-                    backgroundColor: ['#0dcaf0', '#198754', '#ffc107', '#fd7e14']
+                    backgroundColor: ['#00f2fe', '#4facfe', '#a18cd1', '#fbc2eb'],
+                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                    borderWidth: 1,
+                    borderRadius: 6
                 }]
             },
-            options: { responsive: true, plugins: { legend: { display: false } } }
+            options: { 
+                responsive: true, 
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: darkTooltipConfig
+                },
+                scales: darkScalesConfig
+            }
         });
 
-        // Water Benchmark Bar Chart
+        // Water Benchmark Bar Chart with Green-Cyan Neon Palette
         new Chart(document.getElementById('waterBenchmarkChart').getContext('2d'), {
             type: 'bar',
             data: {
@@ -64,26 +96,46 @@
                 datasets: [{
                     label: 'AWARE Water Footprint (m3 world-eq)',
                     data: benchData.water,
-                    backgroundColor: ['#0d6efd', '#20c997', '#6f42c1', '#d63384']
+                    backgroundColor: ['#43e97b', '#38f9d7', '#4facfe', '#00f2fe'],
+                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                    borderWidth: 1,
+                    borderRadius: 6
                 }]
             },
-            options: { responsive: true, plugins: { legend: { display: false } } }
+            options: { 
+                responsive: true, 
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: darkTooltipConfig
+                },
+                scales: darkScalesConfig
+            }
         });
 
-        // Sensitivity Line Chart
+        // Sensitivity Line Chart with Neon Line Accents
         new Chart(document.getElementById('sensitivityChart').getContext('2d'), {
             type: 'line',
             data: {
                 labels: ['0% Recycled', '25% Recycled', '50% Recycled', '75% Recycled', '100% Recycled'],
                 datasets: [
-                    { label: 'Blanco', data: [4.85, 4.62, 4.40, 4.18, 3.95], borderColor: '#0dcaf0', fill: false },
-                    { label: 'Reposado', data: [8.16, 7.82, 7.48, 7.14, 6.80], borderColor: '#198754', fill: false },
-                    { label: 'Añejo', data: [9.45, 9.05, 8.65, 8.25, 7.85], borderColor: '#ffc107', fill: false },
-                    { label: 'Extra Añejo', data: [11.20, 10.70, 10.20, 9.70, 9.20], borderColor: '#fd7e14', fill: false }
+                    { label: 'Blanco', data: [4.85, 4.62, 4.40, 4.18, 3.95], borderColor: '#00f2fe', backgroundColor: '#00f2fe', borderWidth: 2.5, tension: 0.2, fill: false },
+                    { label: 'Reposado', data: [8.16, 7.82, 7.48, 7.14, 6.80], borderColor: '#4facfe', backgroundColor: '#4facfe', borderWidth: 2.5, tension: 0.2, fill: false },
+                    { label: 'Añejo', data: [9.45, 9.05, 8.65, 8.25, 7.85], borderColor: '#a18cd1', backgroundColor: '#a18cd1', borderWidth: 2.5, tension: 0.2, fill: false },
+                    { label: 'Extra Añejo', data: [11.20, 10.70, 10.20, 9.70, 9.20], borderColor: '#fbc2eb', backgroundColor: '#fbc2eb', borderWidth: 2.5, tension: 0.2, fill: false }
                 ]
             },
-            options: { responsive: true }
+            options: { 
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: { color: '#f8fafc', font: { family: 'Inter, sans-serif' } }
+                    },
+                    tooltip: darkTooltipConfig
+                },
+                scales: darkScalesConfig
+            }
         });
     });
 </script>
 {% endblock %}
+
