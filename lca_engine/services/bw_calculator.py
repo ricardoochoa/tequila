@@ -149,7 +149,33 @@ class TequilaBWCalculator:
         else:
             captured_payload = get_default_captured_payload()
 
-        vol_scale = functional_unit_volume_ml / 700.0
+        def get_amt(f_key: str) -> float:
+            entry = captured_payload.get(f_key, {})
+            val = entry.get("amount") if isinstance(entry, dict) else entry
+            if val is None:
+                return 0.0
+            try:
+                return float(val)
+            except (ValueError, TypeError):
+                return 0.0
+
+        def get_t1(f_key: str) -> Optional[float]:
+            entry = captured_payload.get(f_key, {})
+            if isinstance(entry, dict):
+                val = entry.get("tier1_factor")
+                if val is not None and str(val).strip() != "":
+                    try:
+                        return float(val)
+                    except (ValueError, TypeError):
+                        return None
+            return None
+
+        total_produced_liters = get_amt("total_tequila_produced")
+        if total_produced_liters <= 0:
+            total_produced_liters = (functional_unit_volume_ml / 1000.0)
+
+        total_produced_ml = total_produced_liters * 1000.0
+        vol_scale = functional_unit_volume_ml / total_produced_ml
 
         with _BW_LOCK:
             import brightway2 as bw
@@ -196,28 +222,6 @@ class TequilaBWCalculator:
             calc_list = []
             categories_map = get_fields_by_category()
 
-            # Pre-extract key amounts for dynamic multi-field formulas
-            def get_amt(f_key: str) -> float:
-                entry = captured_payload.get(f_key, {})
-                val = entry.get("amount") if isinstance(entry, dict) else entry
-                if val is None:
-                    return 0.0
-                try:
-                    return float(val)
-                except (ValueError, TypeError):
-                    return 0.0
-
-            def get_t1(f_key: str) -> Optional[float]:
-                entry = captured_payload.get(f_key, {})
-                if isinstance(entry, dict):
-                    val = entry.get("tier1_factor")
-                    if val is not None and str(val).strip() != "":
-                        try:
-                            return float(val)
-                        except (ValueError, TypeError):
-                            return None
-                return None
-
             cultivated_area_ha = get_amt("cultivated_area")
             agave_harvested_ton = get_amt("agave_harvested_ton")
             bagasse_gen_ton = get_amt("bagasse_generated_ton")
@@ -249,13 +253,13 @@ class TequilaBWCalculator:
                         computed_amount = agave_harvested_ton * raw_amount * vol_scale
 
                     if fname == "bagasse_boiler_pct":
-                        computed_amount = (bagasse_gen_ton * 1000.0) * (raw_amount / 100.0) * vol_scale
+                        computed_amount = bagasse_gen_ton * (raw_amount / 100.0) * vol_scale
 
                     if fname == "bagasse_compost_pct":
-                        computed_amount = (bagasse_gen_ton * 1000.0) * (raw_amount / 100.0) * vol_scale
+                        computed_amount = bagasse_gen_ton * (raw_amount / 100.0) * vol_scale
 
                     if fname == "bagasse_landfill_pct":
-                        computed_amount = (bagasse_gen_ton * 1000.0) * (raw_amount / 100.0) * vol_scale
+                        computed_amount = bagasse_gen_ton * (raw_amount / 100.0) * vol_scale
 
                     # Intermediate variables: set direct calculated impact to 0.0
                     if fname in ["agave_harvested_ton", "cultivated_area", "bagasse_generated_ton"]:
@@ -326,8 +330,8 @@ class TequilaBWCalculator:
                                 data_tier = "Tier 2 (Default)"
 
                     # Compute Isolated LCIA Impacts
-                    s_gwp = round(computed_amount * factor_gwp, 4)
-                    s_water = round(computed_amount * factor_water, 4)
+                    s_gwp = round((computed_amount * conv_factor) * factor_gwp, 4)
+                    s_water = round((computed_amount * conv_factor) * factor_water, 4)
 
                     total_gwp += s_gwp
                     total_water += s_water

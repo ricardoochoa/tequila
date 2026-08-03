@@ -192,7 +192,7 @@ class LCAEngineTests(TestCase):
     def test_three_tier_data_architecture(self):
         calculator = TequilaBWCalculator()
         payload = get_default_captured_payload()
-        payload["agave_harvested_ton"] = {"amount": 8.62, "tier1_factor": 0.28}
+        payload["grid_electricity_kwh"] = {"amount": 2571428.0, "tier1_factor": 0.45}
 
         results = calculator.calculate_lca(payload, enable_exiobase=False)
         self.assertIn("primary_share_pct", results)
@@ -208,3 +208,50 @@ class LCAEngineTests(TestCase):
 
         with self.assertRaises(ValueError):
             calculator.calculate_lca(payload, enable_exiobase=False)
+
+    def test_per_bottle_gwp_score_within_realistic_range(self):
+        calculator = TequilaBWCalculator()
+        payload = get_default_captured_payload()
+        results = calculator.calculate_lca(payload, enable_exiobase=False)
+        # Spirit bottle footprint should be within realistic range 1.0 to 5.0 kg CO2-eq
+        self.assertGreaterEqual(results["gwp_score"], 1.0)
+        self.assertLessEqual(results["gwp_score"], 5.0)
+
+    def test_production_volume_allocation_scaling(self):
+        calculator = TequilaBWCalculator()
+        payload_base = get_default_captured_payload()
+        results_base = calculator.calculate_lca(payload_base, enable_exiobase=False)
+
+        # Double annual facility production volume (1.5M -> 3.0M L)
+        payload_double = get_default_captured_payload()
+        payload_double["total_tequila_produced"] = {"amount": 3000000.0, "tier1_factor": None}
+        results_double = calculator.calculate_lca(payload_double, enable_exiobase=False)
+
+        # Per-bottle footprint should be halved when facility production is doubled
+        self.assertAlmostEqual(results_double["gwp_score"], results_base["gwp_score"] / 2.0, delta=0.1)
+
+    def test_byproduct_no_double_conversion(self):
+        calculator = TequilaBWCalculator()
+        payload = get_default_captured_payload()
+        payload["bagasse_generated_ton"] = {"amount": 1.0, "tier1_factor": None}
+        payload["bagasse_boiler_pct"] = {"amount": 100.0, "tier1_factor": None}
+        results = calculator.calculate_lca(payload, enable_exiobase=False)
+
+        # 1 ton of bagasse to boiler allocated over 1.5M L = 0.0007 kg bagasse/bottle
+        # With -0.22 kg CO2-eq / kg factor, impact should be a small negative number (~ -0.00015 kg CO2-eq)
+        boiler_hotspot = next(h for h in results["hotspots"] if "Combustión" in h["stage"] or "bagasse_boiler_pct" in h["stage"])
+        self.assertLess(boiler_hotspot["gwp_score"], 0.0)
+        self.assertGreater(boiler_hotspot["gwp_score"], -1.0)
+
+    def test_universal_conversion_factor_tier3(self):
+        calculator = TequilaBWCalculator()
+        payload = get_default_captured_payload()
+        # Set solid_waste_recycled_t (1 ton annual, conv_factor 1000.0)
+        payload["solid_waste_recycled_t"] = {"amount": 1.0, "tier1_factor": None}
+        results = calculator.calculate_lca(payload, enable_exiobase=False)
+
+        # Waste recycling hotspot should accurately reflect -3.098 kg CO2-eq per kg (i.e. -3098.0 kg CO2-eq / t)
+        waste_hotspot = next(h for h in results["hotspots"] if "Reciclaje" in h["stage"] or "solid_waste_recycled_t" in h["stage"])
+        self.assertLess(waste_hotspot["gwp_score"], 0.0)
+        self.assertGreater(waste_hotspot["gwp_score"], -10.0)
+

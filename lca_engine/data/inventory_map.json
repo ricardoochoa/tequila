@@ -435,7 +435,7 @@
         "exiobase_code": "C_POWB",
         "exiobase_name": "Electricity by biomass and waste",
         "exiobase_unit": "kg",
-        "conversion_factor": null,
+        "conversion_factor": 1000.0,
         "fallback_recommended": true,
         "notes": "Convertir porcentaje a toneladas e ingresar al nodo. Las emisiones fugitivas biogénicas requieren ecoinvent para precisión.",
         "ui_label_es": "Bagazo a Combustión",
