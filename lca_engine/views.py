@@ -7,9 +7,10 @@ import pandas as pd
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from .models import Producer, Product, InventoryScenario, InventoryExchange, LCAResult
-from .forms import CSVUploadForm, InventoryExchangeFormSet, GlobalParameterForm, CSVSchemaMapperForm
+from .forms import CSVUploadForm, InventoryExchangeFormSet, GlobalParameterForm, CSVSchemaMapperForm, DynamicInventoryForm
 from .services.bw_calculator import TequilaBWCalculator
-from .services.csv_handler import parse_inventory_csv, generate_hotspot_csv
+from .services.csv_handler import parse_inventory_csv, generate_hotspot_csv, generate_lci_template_csv, parse_key_value_lci_csv
+from .services.inventory_mapper import get_default_captured_payload, get_fields_by_category
 
 
 def get_or_create_default_producer_and_product():
@@ -25,28 +26,16 @@ def get_or_create_default_producer_and_product():
     scenario, created = InventoryScenario.objects.get_or_create(
         product=product,
         name="100% Reposado Tequila (Baseline)",
-        defaults={"description": "Standard cradle-to-gate inventory process.", "version": 1, "is_baseline": True}
+        defaults={
+            "description": "Standard cradle-to-gate inventory process.",
+            "version": 1,
+            "is_baseline": True,
+            "captured_payload": get_default_captured_payload()
+        }
     )
-    if created or scenario.exchanges.count() == 0:
-        defaults = [
-            {"stage_name": "Reposado Tequila Output", "category": "Production", "query": "", "amount": 1.0, "unit": "unit", "location": "MX", "exchange_type": "production"},
-            {"stage_name": "Agave pineapple", "category": "Agave Reception", "query": "Cultivation of crops", "amount": 8.62, "unit": "kg", "location": "MX", "exchange_type": "technosphere"},
-            {"stage_name": "Electricity (Reception)", "category": "Agave Reception", "query": "Production of electricity", "amount": 3.29e-03, "unit": "kWh", "location": "MX", "exchange_type": "technosphere"},
-            {"stage_name": "Fuel Oil (Cooking)", "category": "Cooking", "query": "Production of fuel oil", "amount": 8.06e-01, "unit": "kg", "location": "", "exchange_type": "technosphere"},
-            {"stage_name": "Water (Cooking)", "category": "Cooking", "query": "Collection, purification and distribution of water", "amount": 7.16e-01, "unit": "L", "location": "", "exchange_type": "technosphere"},
-            {"stage_name": "Electricity (Grinding)", "category": "Grinding", "query": "Production of electricity", "amount": 1.01e-01, "unit": "kWh", "location": "MX", "exchange_type": "technosphere"},
-            {"stage_name": "Electricity (Fermentation)", "category": "Fermentation", "query": "Production of electricity", "amount": 9.36e-02, "unit": "kWh", "location": "MX", "exchange_type": "technosphere"},
-            {"stage_name": "Yeast", "category": "Fermentation", "query": "Manufacture of food products", "amount": 4.44e-03, "unit": "kg", "location": "", "exchange_type": "technosphere"},
-            {"stage_name": "CO2 Direct Emissions", "category": "Fermentation", "query": "Carbon dioxide, fossil", "amount": 3.17e-02, "unit": "kg", "location": "", "exchange_type": "biosphere"},
-            {"stage_name": "Fuel Oil (Distillation)", "category": "Distillation", "query": "Production of fuel oil", "amount": 1.35e-01, "unit": "kg", "location": "", "exchange_type": "technosphere"},
-            {"stage_name": "Electricity (Distillation)", "category": "Distillation", "query": "Production of electricity", "amount": 1.004, "unit": "kWh", "location": "MX", "exchange_type": "technosphere"},
-            {"stage_name": "Glass Bottle (550g)", "category": "Packaging", "query": "Manufacture of glass", "amount": 5.50e-01, "unit": "kg", "location": "", "exchange_type": "technosphere"},
-            {"stage_name": "Aluminum Cap", "category": "Packaging", "query": "Manufacture of aluminum", "amount": 9.80e-02, "unit": "kg", "location": "", "exchange_type": "technosphere"},
-            {"stage_name": "Wooden Box", "category": "Packaging", "query": "Manufacture of wood products", "amount": 2.45e-01, "unit": "kg", "location": "", "exchange_type": "technosphere"},
-            {"stage_name": "Bagasse Bio-energy Credit", "category": "Byproduct Credit", "query": "bagasse", "amount": 1.42, "unit": "kg", "location": "MX", "exchange_type": "byproduct"},
-        ]
-        for d in defaults:
-            InventoryExchange.objects.create(scenario=scenario, **d)
+    if not scenario.captured_payload:
+        scenario.captured_payload = get_default_captured_payload()
+        scenario.save()
     return scenario
 
 
@@ -55,15 +44,17 @@ def dashboard_view(request):
 
     fu_ml = float(request.GET.get("functional_unit", 700.0))
     recycling_pct = float(request.GET.get("glass_recycling_rate", 12)) / 100.0
-
-    exchanges = scenario.exchanges.all()
-    calc_list = [{"name": e.stage_name, "query": e.query, "amount": e.amount, "location": e.location, "type": e.exchange_type, "category": e.category} for e in exchanges]
+    if request.GET:
+        enable_exio = request.GET.get("enable_exiobase") in ["on", "true", "True", "1"]
+    else:
+        enable_exio = True
 
     calculator = TequilaBWCalculator()
     results = calculator.calculate_lca(
-        calc_list,
+        scenario.captured_payload,
         functional_unit_volume_ml=fu_ml,
-        glass_recycling_rate=recycling_pct
+        glass_recycling_rate=recycling_pct,
+        enable_exiobase=enable_exio
     )
 
     # Save to LCAResult model
@@ -79,7 +70,8 @@ def dashboard_view(request):
 
     param_form = GlobalParameterForm(initial={
         "functional_unit": fu_ml,
-        "glass_recycling_rate": int(recycling_pct * 100)
+        "glass_recycling_rate": int(recycling_pct * 100),
+        "enable_exiobase": enable_exio
     })
 
     # Generate combined hotspots list for side-by-side table display
@@ -92,6 +84,7 @@ def dashboard_view(request):
         wh = water_dict.get(stage, {})
         combined_hotspots.append({
             "stage": stage,
+            "data_tier": h.get("data_tier", "Fallback"),
             "gwp_score": h.get("gwp_score", 0.0),
             "gwp_pct": h.get("pct", 0.0),
             "water_score": wh.get("water_score", 0.0),
@@ -102,6 +95,7 @@ def dashboard_view(request):
         if stage not in seen_stages:
             combined_hotspots.append({
                 "stage": stage,
+                "data_tier": wh.get("data_tier", "Fallback"),
                 "gwp_score": 0.0,
                 "gwp_pct": 0.0,
                 "water_score": wh.get("water_score", 0.0),
@@ -118,43 +112,58 @@ def dashboard_view(request):
     return render(request, "lca_engine/dashboard.html", context)
 
 
+def download_lci_template_view(request):
+    """
+    Exports standardized 4-column key-value CSV template (Nombre_Variable, Valor, Unidades, Notas).
+    """
+    csv_content = generate_lci_template_csv()
+    response = HttpResponse(csv_content, content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="lci_inventory_template.csv"'
+    return response
+
+
 def inventory_edit_view(request):
     scenario = get_or_create_default_producer_and_product()
     upload_form = CSVUploadForm()
+    payload = scenario.captured_payload or get_default_captured_payload()
+    upload_errors = []
 
     if request.method == "POST":
         if "upload_csv" in request.POST:
             upload_form = CSVUploadForm(request.POST, request.FILES)
             if upload_form.is_valid():
                 upload_mode = upload_form.cleaned_data.get("upload_mode", "replace")
-                parsed_exchanges = parse_inventory_csv(request.FILES["csv_file"])
-                
-                if upload_mode == "replace":
-                    scenario.exchanges.all().delete()
+                parsed_payload, errors = parse_key_value_lci_csv(request.FILES["csv_file"])
 
-                for item in parsed_exchanges:
-                    InventoryExchange.objects.create(
-                        scenario=scenario,
-                        stage_name=item["name"],
-                        category=item["category"],
-                        query=item["query"],
-                        amount=item["amount"],
-                        unit=item["unit"],
-                        location=item["location"],
-                        exchange_type=item["type"]
-                    )
-                return redirect("dashboard")
+                if errors:
+                    upload_errors = errors
+                    dynamic_form = DynamicInventoryForm(payload=payload)
+                else:
+                    if upload_mode == "append":
+                        merged_payload = dict(payload)
+                        merged_payload.update(parsed_payload)
+                        scenario.captured_payload = merged_payload
+                    else:
+                        scenario.captured_payload = parsed_payload
+                    scenario.save()
+                    return redirect("dashboard")
+            else:
+                dynamic_form = DynamicInventoryForm(payload=payload)
         else:
-            formset = InventoryExchangeFormSet(request.POST, instance=scenario)
-            if formset.is_valid():
-                formset.save()
+            dynamic_form = DynamicInventoryForm(request.POST, payload=payload)
+            if dynamic_form.is_valid():
+                scenario.captured_payload = dynamic_form.get_structured_payload()
+                scenario.save()
                 return redirect("dashboard")
+    else:
+        dynamic_form = DynamicInventoryForm(payload=payload)
 
-    formset = InventoryExchangeFormSet(instance=scenario)
     context = {
         "scenario": scenario,
-        "formset": formset,
+        "dynamic_form": dynamic_form,
+        "categories": get_fields_by_category(),
         "upload_form": upload_form,
+        "upload_errors": upload_errors,
     }
     return render(request, "lca_engine/inventory_form.html", context)
 
@@ -202,12 +211,21 @@ def benchmark_view(request):
     return render(request, "lca_engine/benchmark.html", context)
 
 
-
 def export_csv_view(request):
     scenario = get_or_create_default_producer_and_product()
-    exchanges = scenario.exchanges.all()
-    calc_list = [{"name": e.stage_name, "query": e.query, "amount": e.amount, "location": e.location, "type": e.exchange_type, "category": e.category} for e in exchanges]
-    results = TequilaBWCalculator().calculate_lca(calc_list)
+    fu_ml = float(request.GET.get("functional_unit", 700.0))
+    recycling_pct = float(request.GET.get("glass_recycling_rate", 12)) / 100.0
+    if request.GET:
+        enable_exio = request.GET.get("enable_exiobase") in ["on", "true", "True", "1"]
+    else:
+        enable_exio = True
+
+    results = TequilaBWCalculator().calculate_lca(
+        scenario.captured_payload,
+        functional_unit_volume_ml=fu_ml,
+        glass_recycling_rate=recycling_pct,
+        enable_exiobase=enable_exio
+    )
 
     csv_content = generate_hotspot_csv(results["hotspots"], results.get("water_hotspots"))
     response = HttpResponse(csv_content, content_type="text/csv")

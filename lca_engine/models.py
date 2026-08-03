@@ -39,11 +39,29 @@ class InventoryScenario(models.Model):
     description = models.TextField(blank=True, default="Cradle-to-gate inventory process.")
     version = models.IntegerField(default=1)
     is_baseline = models.BooleanField(default=True)
+    captured_payload = models.JSONField(default=dict, blank=True, help_text="JSON payload mapping django_field to amounts and tier1 factors")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.name} (v{self.version})"
+
+
+class FallbackEmissionFactor(models.Model):
+    django_field = models.CharField(max_length=100, db_index=True)
+    reporting_year = models.IntegerField(db_index=True)
+    emission_factor = models.FloatField()
+    unit = models.CharField(max_length=50)
+    indicator = models.CharField(max_length=50, default="GWP100")
+    source_reference = models.CharField(max_length=255)
+    notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        unique_together = ("django_field", "reporting_year", "indicator")
+
+    def __str__(self):
+        return f"{self.django_field} ({self.reporting_year}): {self.emission_factor} {self.unit}"
+
 
 
 class InventoryExchange(models.Model):
@@ -62,6 +80,8 @@ class InventoryExchange(models.Model):
     unit = models.CharField(max_length=30, default="kg")
     location = models.CharField(max_length=10, blank=True, null=True, default="MX")
     exchange_type = models.CharField(max_length=20, choices=EXCHANGE_TYPES, default="technosphere")
+    supplier_gwp_factor = models.FloatField(null=True, blank=True, help_text="Custom kg CO2-eq per unit from verified supplier")
+    supplier_water_factor = models.FloatField(null=True, blank=True, help_text="Custom m3 world-eq per unit from verified supplier")
 
     def __str__(self):
         return f"{self.stage_name} ({self.amount} {self.unit})"

@@ -5,22 +5,46 @@
 {% block content %}
 <div class="row mb-4 align-items-center">
     <div class="col-md-8">
-        <h2 class="fw-bold text-white mb-1" data-i18n="inventory_title">Inventory Management</h2>
-        <p class="text-muted mb-0" data-i18n="inventory_subtitle">Upload a bulk inventory CSV file or edit lifecycle exchanges manually below.</p>
+        <h2 class="fw-bold text-white mb-1" data-i18n="inventory_title">Inventory Management (JSON Dynamic 3-Tier System)</h2>
+        <p class="text-muted mb-0" data-i18n="inventory_subtitle">Edit lifecycle parameter inputs structured by process phases. Primary supplier data (Tier 1) overrides generic databases.</p>
     </div>
     <div class="col-md-4 text-md-end mt-3 mt-md-0">
         <a href="{% url 'dashboard' %}" class="btn btn-outline-light" data-i18n="back_dashboard">← Back to Dashboard</a>
     </div>
 </div>
 
+{% if upload_errors %}
+<div class="alert alert-danger border-danger border-opacity-50 mb-4 animate-fade" style="background: rgba(239, 68, 68, 0.15); color: #f87171;">
+    <div class="d-flex align-items-center mb-2">
+        <i class="bi bi-exclamation-triangle-fill fs-4 me-2 text-danger"></i>
+        <h5 class="fw-bold mb-0">Errores de Validación en el Archivo CSV</h5>
+    </div>
+    <p class="small mb-2 text-light">Por favor corrija los siguientes errores en su archivo CSV e intente cargar de nuevo:</p>
+    <ul class="mb-0 small ps-3">
+        {% for err in upload_errors %}
+        <li><strong>{{ err }}</strong></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
 <div class="card p-4 mb-4">
-    <h5 class="fw-bold mb-3 text-white" data-i18n="csv_upload_title">Bulk CSV Upload</h5>
+    <div class="d-flex align-items-center justify-content-between mb-3 border-bottom border-secondary border-opacity-25 pb-3">
+        <div>
+            <h5 class="fw-bold text-white mb-0" data-i18n="csv_upload_title">Bulk CSV Data Ingestion</h5>
+            <small class="text-muted">Import standardized key-value CSV template (Nombre_Variable, Valor, Unidades, Notas).</small>
+        </div>
+        <a href="{% url 'download_lci_template' %}" class="btn btn-outline-info btn-sm px-3 fw-semibold">
+            <i class="bi bi-download me-1"></i> Download CSV Template
+        </a>
+    </div>
+
     <form method="post" enctype="multipart/form-data" class="row g-3 align-items-center">
         {% csrf_token %}
         <div class="col-md-7">
             <label class="form-label text-muted small text-uppercase fw-bold">Select CSV File</label>
             {{ upload_form.csv_file }}
-            <div class="form-text text-muted mt-1">Required CSV headers: <code>stage_name, category, query, amount, unit, location, exchange_type</code></div>
+            <div class="form-text text-muted mt-1">Four columns: <code>Nombre_Variable, Valor, Unidades, Notas</code></div>
         </div>
         <div class="col-md-5">
             <label class="form-label text-muted small text-uppercase fw-bold">Upload Mode</label>
@@ -41,55 +65,83 @@
 
 <div class="card p-4">
     <div class="d-flex align-items-center justify-content-between mb-3">
-        <h5 class="fw-bold text-white mb-0" data-i18n="manual_form_title">Manual Inventory Formset Editor</h5>
-        <span class="badge bg-secondary opacity-75 fs-7">{{ formset|length }} Exchanges</span>
+        <div>
+            <h5 class="fw-bold text-white mb-0" data-i18n="manual_form_title">JSON-Driven Phase Accordions</h5>
+            <small class="text-muted">Fill activity data per lifecycle phase. Enter <strong>Factor Proveedor Tier 1</strong> to override background emission factors.</small>
+        </div>
+        <span class="badge bg-info text-dark fw-bold fs-7">3-Tier Deterministic LCA Engine</span>
     </div>
     
     <form method="post">
         {% csrf_token %}
-        {{ formset.management_form }}
-        
-        <div class="table-responsive">
-            <table class="table table-bordered table-dark align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th style="width: 22%;">Stage Name</th>
-                        <th style="width: 18%;">Category</th>
-                        <th style="width: 22%;">DB Search Query</th>
-                        <th style="width: 10%;">Amount</th>
-                        <th style="width: 8%;">Unit</th>
-                        <th style="width: 8%;">Location</th>
-                        <th style="width: 10%;">Type</th>
-                        <th class="text-center" style="width: 4%;">Delete</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for form in formset %}
-                    <tr>
-                        {{ form.id }}
-                        <td>{{ form.stage_name }}</td>
-                        <td>{{ form.category }}</td>
-                        <td>{{ form.query }}</td>
-                        <td>{{ form.amount }}</td>
-                        <td>{{ form.unit }}</td>
-                        <td>{{ form.location }}</td>
-                        <td>{{ form.exchange_type }}</td>
-                        <td class="text-center">
-                            {% if form.instance.pk %}
-                                {{ form.DELETE }}
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+        <div class="accordion accordion-dark" id="inventoryPhaseAccordion">
+            {% for cat in dynamic_form.get_categorized_fields %}
+            <div class="accordion-item bg-dark text-white border-secondary mb-3 rounded overflow-hidden">
+                <h2 class="accordion-header" id="heading_{{ cat.category_name }}">
+                    <button class="accordion-button {% if not forloop.first %}collapsed{% endif %} bg-dark text-light fw-bold fs-6" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_{{ cat.category_name }}" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="collapse_{{ cat.category_name }}">
+                        <i class="bi bi-diagram-3 me-2 text-info"></i>
+                        {{ cat.category_name }}
+                        {% if cat.metadata.description %}
+                        <span class="badge bg-secondary ms-3 opacity-75 fw-normal fs-7">{{ cat.metadata.description }}</span>
+                        {% endif %}
+                    </button>
+                </h2>
+                <div id="collapse_{{ cat.category_name }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" aria-labelledby="heading_{{ cat.category_name }}" data-bs-parent="#inventoryPhaseAccordion">
+                    <div class="accordion-body bg-dark border-top border-secondary">
+                        <div class="row g-4">
+                            {% for item in cat.fields %}
+                            <div class="col-md-6 col-lg-6 border-bottom border-secondary border-opacity-25 pb-3">
+                                <div class="card h-100 p-3 bg-secondary bg-opacity-10 border border-secondary border-opacity-50">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <label class="form-label text-info fw-bold mb-0 fs-6">
+                                            {{ item.info.ui_label_es }}
+                                            {% if item.info.capture_unit and item.info.capture_unit != "Choice" %}
+                                                <span class="text-muted fs-7">({{ item.info.capture_unit }})</span>
+                                            {% endif %}
+                                        </label>
+                                        {% if item.info.fallback_recommended %}
+                                            <span class="badge bg-warning text-dark fs-8" title="Rutear a modelo Tier 3 Fallback DB">Tier 3 Fallback</span>
+                                        {% else %}
+                                            <span class="badge bg-primary fs-8" title="Mapeado a EXIOBASE 3 / Direct DB">Tier 2 EXIOBASE</span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="text-muted small mb-2" style="font-size: 0.82rem;">{{ item.info.ui_description_es }}</p>
+                                    
+                                    <div class="row g-2 align-items-center">
+                                        <div class="{% if item.bound_tier1_field %}col-md-7{% else %}col-12{% endif %}">
+                                            <label class="form-label text-muted small mb-1 fw-semibold">Valor de Actividad</label>
+                                            {{ item.bound_field }}
+                                        </div>
+
+                                        {% if item.bound_tier1_field %}
+                                        <div class="col-md-5">
+                                            <label class="form-label text-success small mb-1 fw-semibold" style="color: #43e97b !important;">Tier 1 Proveedor</label>
+                                            {{ item.bound_tier1_field }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+
+                                    {% if item.info.notes %}
+                                    <div class="mt-2 text-muted" style="font-size: 0.75rem; font-style: italic;">
+                                        <i class="bi bi-info-circle me-1"></i>{{ item.info.notes }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
         </div>
 
         <div class="mt-4 text-end">
-            <button type="submit" class="btn btn-primary px-4 fw-semibold" style="background: linear-gradient(135deg, #00f2fe, #4facfe); border: none; color: #0f172a;" data-i18n="save_recalculate">Save & Recalculate LCA</button>
+            <button type="submit" class="btn btn-primary px-4 py-2 fw-bold" style="background: linear-gradient(135deg, #00f2fe, #4facfe); border: none; color: #0f172a;" data-i18n="save_recalculate">
+                Save & Recalculate LCA Engine
+            </button>
         </div>
     </form>
 </div>
 {% endblock %}
-
-

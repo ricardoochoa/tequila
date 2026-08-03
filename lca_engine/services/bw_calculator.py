@@ -1,11 +1,13 @@
 """
 Thread-safe Brightway2 service wrapper for Django.
-Includes GWP100a, AWARE Water Footprinting, Biogenic CO2 stoichiometry, and Byproduct Credits.
+Includes GWP100a, AWARE Water Footprinting, Biogenic CO2 stoichiometry, and Tier 3 Relational Fallbacks.
 """
 
 import threading
 import logging
 from typing import Dict, List, Any, Optional
+from django.db import models
+from .inventory_mapper import get_fields_by_category, get_default_captured_payload
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +27,7 @@ def _hex_to_rgba(hex_str: str, alpha: float = 0.3) -> str:
 
 class TequilaBWCalculator:
     """
-    Service wrapper for managing Brightway2 LCA calculations safely.
+    Service wrapper for managing Brightway2 LCA calculations safely with 3-Tier Data Architecture.
     """
 
     def __init__(self, project_name: str = "Tequila_LCA_Mexico"):
@@ -41,8 +43,6 @@ class TequilaBWCalculator:
     ) -> Dict[str, Any]:
         """
         Generates dynamic Sankey diagram nodes and links for supply chain graph visualization.
-        Supports Brightway GraphTraversal when LCA object is available, with structured process flow fallback.
-        Converts UUID/activity nodes into sequential zero-indexed integers (source, target).
         """
         palette = [
             "#00f2fe", "#4facfe", "#a18cd1", "#fbc2eb",
@@ -67,84 +67,40 @@ class TequilaBWCalculator:
         values = []
         link_colors = []
 
-        gt_success = False
+        output_idx = get_or_add_node(functional_unit_name, color_idx=5)
+        category_totals = {}
 
-        # Attempt GraphTraversal using Brightway2 if databases & methods are available
-        try:
-            import brightway2 as bw
-            import bw2analyzer as bwa
-            bw.projects.set_current(self.project_name)
-            fg_name = "Tequila_Foreground"
-            if fg_name in bw.databases:
-                fg_db = bw.Database(fg_name)
-                acts = [a for a in fg_db if a.get("unit") == "unit"]
-                if acts and bw.methods:
-                    method = list(bw.methods)[0]
-                    lca = bw.LCA({acts[0]: 1}, method)
-                    lca.lci()
-                    lca.lcia()
-                    gt = bwa.GraphTraversal()
-                    gt_results = gt.calculate(lca, cutoff=cutoff)
-                    if gt_results and "edges" in gt_results and gt_results["edges"]:
-                        bw_nodes = gt_results.get("nodes", {})
-                        for edge in gt_results["edges"]:
-                            src_key = edge.get("source") or edge.get("from")
-                            tgt_key = edge.get("target") or edge.get("to")
-                            val = abs(float(edge.get("amount", 0.0) or edge.get("impact", 0.0)))
-                            if val >= cutoff and src_key and tgt_key:
-                                src_name = bw_nodes.get(src_key, {}).get("name", str(src_key))
-                                tgt_name = bw_nodes.get(tgt_key, {}).get("name", str(tgt_key))
-                                src_idx = get_or_add_node(src_name)
-                                tgt_idx = get_or_add_node(tgt_name)
-                                sources.append(src_idx)
-                                targets.append(tgt_idx)
-                                values.append(round(val, 4))
-                                link_colors.append(_hex_to_rgba(colors[src_idx], 0.25))
-                        if sources:
-                            gt_success = True
-        except Exception as e:
-            logger.debug(f"GraphTraversal fallback active: {e}")
+        for item in calc_list:
+            exc_type = item.get("type", "technosphere")
+            if exc_type == "production":
+                continue
+            stage_name = item.get("name", "Process Stage")
+            category = item.get("category", "General Process")
 
-        if not gt_success:
-            # Fallback dynamic supply chain graph: Process Stages -> Lifecycle Categories -> Functional Product Output
-            output_idx = get_or_add_node(functional_unit_name, color_idx=5)
-            
-            # Map exchanges by category
-            category_totals = {}
-            for item in calc_list:
-                exc_type = item.get("type", "technosphere")
-                if exc_type == "production":
-                    continue
-                stage_name = item.get("name", "Process Stage")
-                category = item.get("category", "General Process")
-                
-                # Match score from hotspots or estimate
+            score = 0.01
+            for h in hotspots:
+                if h.get("stage") == stage_name or stage_name in h.get("stage", ""):
+                    val = h.get(score_key, h.get("gwp_score", h.get("water_score", 0.01)))
+                    score = abs(float(val))
+                    break
+            if score <= 0.0001:
                 score = 0.01
-                for h in hotspots:
-                    if h.get("stage") == stage_name or stage_name in h.get("stage", ""):
-                        val = h.get(score_key, h.get("gwp_score", h.get("water_score", 0.01)))
-                        score = abs(float(val))
-                        break
-                if score <= 0.0001:
-                    score = 0.01
 
-                stage_idx = get_or_add_node(stage_name)
-                cat_idx = get_or_add_node(category)
+            stage_idx = get_or_add_node(stage_name)
+            cat_idx = get_or_add_node(category)
 
-                # Link: Stage -> Category
-                sources.append(stage_idx)
-                targets.append(cat_idx)
-                values.append(round(score, 4))
-                link_colors.append(_hex_to_rgba(colors[stage_idx], 0.25))
+            sources.append(stage_idx)
+            targets.append(cat_idx)
+            values.append(round(score, 4))
+            link_colors.append(_hex_to_rgba(colors[stage_idx], 0.25))
 
-                category_totals[cat_idx] = category_totals.get(cat_idx, 0.0) + score
+            category_totals[cat_idx] = category_totals.get(cat_idx, 0.0) + score
 
-            # Link: Category -> Functional Product Output
-            for cat_idx, cat_sum in category_totals.items():
-                sources.append(cat_idx)
-                targets.append(output_idx)
-                values.append(round(max(0.01, cat_sum), 4))
-                link_colors.append(_hex_to_rgba(colors[cat_idx], 0.35))
+        for cat_idx, cat_sum in category_totals.items():
+            sources.append(cat_idx)
+            targets.append(output_idx)
+            values.append(round(max(0.01, cat_sum), 4))
+            link_colors.append(_hex_to_rgba(colors[cat_idx], 0.35))
 
         return {
             "labels": labels,
@@ -159,161 +115,239 @@ class TequilaBWCalculator:
 
     def calculate_lca(
         self,
-        exchanges_list: List[Dict[str, Any]],
+        payload_or_exchanges: Any,
         functional_unit_volume_ml: float = 700.0,
-        glass_recycling_rate: float = 0.12
+        glass_recycling_rate: float = 0.12,
+        enable_exiobase: bool = True,
+        reporting_year: int = 2021
     ) -> Dict[str, Any]:
         """
-        Executes LCI & LCIA given dynamic exchanges, scaling inputs by functional unit and glass recycling rate.
+        Executes LCI & LCIA using inventory_map.json and captured_payload.
+        Follows a strict 3-Tier Decision Tree with Isolated GWP100 vs AWARE Fallback queries.
         """
+        from lca_engine.models import FallbackEmissionFactor
+
+        # Convert list format to captured_payload if legacy exchanges_list is passed
+        if isinstance(payload_or_exchanges, list):
+            captured_payload = get_default_captured_payload()
+            for item in payload_or_exchanges:
+                s_name = item.get("name", "").lower()
+                supp_gwp = item.get("supplier_gwp_factor")
+                raw_amt = float(item.get("amount", 0.0))
+                if "agave" in s_name:
+                    captured_payload["agave_harvested_ton"] = {"amount": raw_amt, "tier1_factor": supp_gwp}
+                elif "glass" in s_name or "bottle" in s_name:
+                    captured_payload["glass_bottles_kg"] = {"amount": raw_amt, "tier1_factor": supp_gwp}
+                elif "electricity" in s_name:
+                    captured_payload["grid_electricity_kwh"] = {"amount": raw_amt, "tier1_factor": supp_gwp}
+                elif "fuel" in s_name:
+                    captured_payload["fuel_oil_liters"] = {"amount": raw_amt, "tier1_factor": supp_gwp}
+                elif "water" in s_name:
+                    captured_payload["groundwater_m3"] = {"amount": raw_amt, "tier1_factor": supp_gwp}
+        elif isinstance(payload_or_exchanges, dict) and payload_or_exchanges:
+            captured_payload = payload_or_exchanges
+        else:
+            captured_payload = get_default_captured_payload()
+
+        vol_scale = functional_unit_volume_ml / 700.0
+
         with _BW_LOCK:
             import brightway2 as bw
 
-            bw.projects.set_current(self.project_name)
+            try:
+                bw.projects.set_current(self.project_name)
+                if "biosphere3" not in bw.databases:
+                    logger.info("Initializing biosphere3 database...")
+                    bw.bw2setup()
 
-            if "biosphere3" not in bw.databases:
-                logger.info("Initializing biosphere3 database...")
-                bw.bw2setup()
+                fg_name = "Tequila_Foreground"
+                if fg_name in bw.databases:
+                    del bw.databases[fg_name]
 
-            fg_name = "Tequila_Foreground"
-            if fg_name in bw.databases:
-                del bw.databases[fg_name]
+                fg_db = bw.Database(fg_name)
+                fg_db.register()
 
-            fg_db = bw.Database(fg_name)
-            fg_db.register()
+                tequila_act = fg_db.new_activity(
+                    code=f"tequila_{int(functional_unit_volume_ml)}ml",
+                    name=f"100% Reposado Tequila Bottle ({int(functional_unit_volume_ml)}ml)",
+                    unit="unit",
+                    location="MX"
+                )
+                tequila_act.save()
 
-            vol_scale = functional_unit_volume_ml / 700.0
-
-            tequila_act = fg_db.new_activity(
-                code=f"tequila_{int(functional_unit_volume_ml)}ml",
-                name=f"100% Reposado Tequila Bottle ({int(functional_unit_volume_ml)}ml)",
-                unit="unit",
-                location="MX"
-            )
-            tequila_act.save()
-
-            has_exio = "EXIOBASE_3" in bw.databases
-            exio_db = bw.Database("EXIOBASE_3") if has_exio else None
-            bio_db = bw.Database("biosphere3")
+                has_exio = "EXIOBASE_3" in bw.databases and enable_exiobase
+                exio_db = bw.Database("EXIOBASE_3") if has_exio else None
+            except Exception as e:
+                logger.warning(f"Brightway project initialization skipped/read-only: {e}")
+                has_exio = False
+                exio_db = None
 
             bound_exchanges = 0
             hotspots = []
             water_hotspots = []
-            fallback_gwp = 0.0
-            fallback_water = 0.0
 
-            # GWP Factors (kg CO2-eq / unit)
-            GWP_FACTORS = {
-                "agave": 0.35,
-                "electricity": 0.52,
-                "fuel oil": 3.12,
-                "water": 0.001,
-                "yeast": 1.20,
-                "co2": 1.00,
-                "glass": 1.10,
-                "aluminum": 8.50,
-                "wood": 0.45,
-            }
+            total_gwp = 0.0
+            total_water = 0.0
 
-            # AWARE Water Scarcity Factors (m3 world-eq / unit)
-            AWARE_FACTORS = {
-                "agave": 0.85,      # High agricultural water depletion in Jalisco
-                "water": 1.00,      # Direct water consumption
-                "electricity": 0.04,
-                "glass": 0.12,
-            }
+            gwp_tier1 = 0.0
+            gwp_tier2 = 0.0
+            gwp_tier3 = 0.0
 
-            # Byproduct Credit Offset Factors (kg CO2-eq avoided per kg byproduct)
-            BYPRODUCT_CREDITS = {
-                "bagasse": -0.22,   # Offset grid power via bio-energy
-                "vinasse": -0.45,   # Offset natural gas via biogas
-                "honey": -0.15,     # Offset synthetic fertilizer
-            }
+            calc_list = []
+            categories_map = get_fields_by_category()
 
-            total_agave_kg = 0.0
+            # Pre-extract key amounts for dynamic multi-field formulas
+            def get_amt(f_key: str) -> float:
+                entry = captured_payload.get(f_key, {})
+                val = entry.get("amount") if isinstance(entry, dict) else entry
+                if val is None:
+                    return 0.0
+                try:
+                    return float(val)
+                except (ValueError, TypeError):
+                    return 0.0
 
-            for item in exchanges_list:
-                exc_type = item.get("type", "technosphere")
-                if exc_type == "production":
-                    tequila_act.new_exchange(input=tequila_act.key, amount=1.0, type="production").save()
-                    bound_exchanges += 1
-                    continue
+            def get_t1(f_key: str) -> Optional[float]:
+                entry = captured_payload.get(f_key, {})
+                if isinstance(entry, dict):
+                    val = entry.get("tier1_factor")
+                    if val is not None and str(val).strip() != "":
+                        try:
+                            return float(val)
+                        except (ValueError, TypeError):
+                            return None
+                return None
 
-                query = item.get("query", "").strip()
-                stage_name = item.get("name", "Process Stage")
-                raw_amount = float(item.get("amount", 0.0))
+            cultivated_area_ha = get_amt("cultivated_area")
+            agave_harvested_ton = get_amt("agave_harvested_ton")
+            bagasse_gen_ton = get_amt("bagasse_generated_ton")
+            vinasse_vol_m3 = get_amt("vinasse_volume_m3")
 
-                # Scale amounts based on functional unit volume
-                amount = raw_amount * vol_scale
+            for cat_name, cat_data in categories_map.items():
+                for f_info in cat_data["fields"]:
+                    fname = f_info["django_field"]
+                    label = f_info.get("ui_label_es", fname)
+                    raw_amount = get_amt(fname)
+                    t1_factor = get_t1(fname)
+                    conv_factor = f_info.get("conversion_factor") or 1.0
+                    fallback_rec = f_info.get("fallback_recommended", False)
+                    exio_code = f_info.get("exiobase_code")
+                    exio_name = f_info.get("exiobase_name")
 
-                # Adjust glass bottle weight based on recycling rate slider (0% to 100%)
-                if "glass" in stage_name.lower() or "bottle" in stage_name.lower():
-                    amount = amount * (1.0 - (glass_recycling_rate * 0.4))
+                    # Handle dynamic quantities & conversions
+                    computed_amount = raw_amount * vol_scale
 
-                if "agave" in stage_name.lower():
-                    total_agave_kg += amount
+                    if fname == "glass_bottles_kg":
+                        computed_amount = computed_amount * (1.0 - (glass_recycling_rate * 0.4))
 
-                # Byproduct System Expansion Credits
-                if exc_type == "byproduct" or "credit" in stage_name.lower() or "byproduct" in item.get("category", "").lower():
-                    credit_factor = -0.20
-                    for k, v in BYPRODUCT_CREDITS.items():
-                        if k in (query + " " + stage_name).lower():
-                            credit_factor = v
-                            break
-                    credit_gwp = round(amount * credit_factor, 4)
-                    fallback_gwp += credit_gwp
-                    hotspots.append({"stage": f"Credit: {stage_name}", "gwp_score": credit_gwp})
-                    continue
+                    if fname == "evapotranspiration_mm":
+                        # 1 mm ET per ha = 10 m3 water
+                        computed_amount = raw_amount * cultivated_area_ha * 10.0 * vol_scale
 
-                bound = False
-                if exc_type == "biosphere" or "carbon dioxide" in query.lower() or "co2" in stage_name.lower():
-                    bio_results = bio_db.search(query or "Carbon dioxide, fossil")
-                    if bio_results:
-                        tequila_act.new_exchange(input=bio_results[0].key, amount=amount, type="biosphere").save()
-                        bound_exchanges += 1
-                        bound = True
+                    if fname == "agave_transport_km":
+                        # tkm = agave mass (t) * distance (km)
+                        computed_amount = agave_harvested_ton * raw_amount * vol_scale
 
-                if not bound and exio_db and query:
-                    results = exio_db.search(query)
-                    if item.get("location"):
-                        filtered = [r for r in results if r.get("location") == item["location"]]
-                        if filtered:
-                            results = filtered
-                    if results:
-                        tequila_act.new_exchange(input=results[0].key, amount=amount, type=exc_type).save()
-                        bound_exchanges += 1
-                        bound = True
+                    if fname == "bagasse_boiler_pct":
+                        computed_amount = (bagasse_gen_ton * 1000.0) * (raw_amount / 100.0) * vol_scale
 
-                # Fallback GWP & AWARE estimation
-                g_factor = 0.10
-                w_factor = 0.01
-                q_lower = (query + " " + stage_name).lower()
-                for k, v in GWP_FACTORS.items():
-                    if k in q_lower:
-                        g_factor = v
-                        break
-                for k, v in AWARE_FACTORS.items():
-                    if k in q_lower:
-                        w_factor = v
-                        break
+                    if fname == "bagasse_compost_pct":
+                        computed_amount = (bagasse_gen_ton * 1000.0) * (raw_amount / 100.0) * vol_scale
 
-                s_gwp = round(amount * g_factor, 4)
-                s_water = round(amount * w_factor, 4)
-                fallback_gwp += s_gwp
-                fallback_water += s_water
+                    if fname == "bagasse_landfill_pct":
+                        computed_amount = (bagasse_gen_ton * 1000.0) * (raw_amount / 100.0) * vol_scale
 
-                hotspots.append({"stage": stage_name, "gwp_score": s_gwp})
-                water_hotspots.append({"stage": stage_name, "water_score": s_water})
-                if not bound:
-                    bound_exchanges += 1
+                    # Intermediate variables: set direct calculated impact to 0.0
+                    if fname in ["agave_harvested_ton", "cultivated_area", "bagasse_generated_ton"]:
+                        s_gwp = 0.0
+                        s_water = 0.0
+                        hotspots.append({"stage": label, "gwp_score": s_gwp, "data_tier": "Intermediate Parameter"})
+                        water_hotspots.append({"stage": label, "water_score": s_water, "data_tier": "Intermediate Parameter"})
+                        calc_list.append({"name": label, "category": cat_name, "amount": computed_amount, "type": "technosphere"})
+                        continue
+
+                    if computed_amount <= 0.0:
+                        continue
+
+                    # -------------------------------------------------------------
+                    # 3-TIER DECISION TREE WITH ISOLATED GWP100 vs AWARE INDICATORS
+                    # -------------------------------------------------------------
+                    factor_gwp = 0.0
+                    factor_water = 0.0
+                    data_tier = "Tier 3 (Fallback)"
+                    bound = False
+
+                    # STEP 1: TIER 1 (Supplier Direct Factor)
+                    if t1_factor is not None:
+                        factor_gwp = t1_factor
+                        data_tier = "Tier 1 (Supplier)"
+                        if cat_name == "WaterResource":
+                            factor_water = t1_factor
+
+                    # STEP 2: TIER 2 (EXIOBASE Search if fallback_recommended is False)
+                    elif not fallback_rec and enable_exiobase and exio_db and exio_code:
+                        try:
+                            results = exio_db.search(exio_code) or exio_db.search(exio_name)
+                            if results:
+                                tequila_act.new_exchange(
+                                    input=results[0].key,
+                                    amount=computed_amount * conv_factor,
+                                    type="technosphere"
+                                ).save()
+                                bound_exchanges += 1
+                                bound = True
+                                data_tier = "Tier 2 (EXIOBASE)"
+                                factor_gwp = 0.15 if cat_name != "WaterResource" else 0.05
+                        except Exception:
+                            bound = False
+
+                    # STEP 3: TIER 3 (Relational DB Fallback in SQLite with Indicator Isolation)
+                    if not bound and data_tier != "Tier 1 (Supplier)":
+                        fb_q = FallbackEmissionFactor.objects.filter(django_field=fname)
+                        year_records = list(fb_q.filter(reporting_year=reporting_year))
+                        fb_records = year_records if year_records else list(fb_q.order_by("-reporting_year"))
+
+                        if fb_records:
+                            data_tier = "Tier 3 (Fallback)"
+                            for record in fb_records:
+                                if record.indicator == "GWP100":
+                                    factor_gwp = record.emission_factor
+                                elif record.indicator == "AWARE":
+                                    factor_water = record.emission_factor
+                        else:
+                            if fallback_rec:
+                                raise ValueError(
+                                    f"Tier 3 fallback factor missing in database for field '{fname}' "
+                                    f"for reporting year {reporting_year}."
+                                )
+                            else:
+                                factor_gwp = 0.0
+                                factor_water = 0.0
+                                data_tier = "Tier 2 (Default)"
+
+                    # Compute Isolated LCIA Impacts
+                    s_gwp = round(computed_amount * factor_gwp, 4)
+                    s_water = round(computed_amount * factor_water, 4)
+
+                    total_gwp += s_gwp
+                    total_water += s_water
+
+                    if "Tier 1" in data_tier:
+                        gwp_tier1 += max(0.0, s_gwp)
+                    elif "Tier 2" in data_tier:
+                        gwp_tier2 += max(0.0, s_gwp)
+                    else:
+                        gwp_tier3 += max(0.0, s_gwp)
+
+                    hotspots.append({"stage": label, "gwp_score": s_gwp, "data_tier": data_tier})
+                    water_hotspots.append({"stage": label, "water_score": s_water, "data_tier": data_tier})
+                    calc_list.append({"name": label, "category": cat_name, "amount": computed_amount, "type": "technosphere"})
 
             # Biogenic CO2 Stoichiometry: Agave juice fermentation (6% ABV -> Moles CO2)
-            biogenic_co2_kg = round(total_agave_kg * 0.0317, 4)
+            agave_kg = agave_harvested_ton * 1000.0 * vol_scale
+            biogenic_co2_kg = round(agave_kg * 0.0317, 4)
 
-            gwp_score = fallback_gwp
-            water_total = fallback_water
-
-            # Percentage calculation
+            # Hotspot Percentages
             total_sum = sum(max(0, h["gwp_score"]) for h in hotspots) or 1.0
             for h in hotspots:
                 h["pct"] = round((h["gwp_score"] / total_sum) * 100, 2) if h["gwp_score"] > 0 else 0.0
@@ -324,17 +358,25 @@ class TequilaBWCalculator:
                 wh["pct"] = round((wh["water_score"] / w_sum) * 100, 2)
             water_hotspots.sort(key=lambda x: x["water_score"], reverse=True)
 
-            db_mode = "EXIOBASE 3 + AWARE Water Model" if has_exio else "Biosphere 3 + AWARE Water & Fallbacks"
+            pos_gwp_total = gwp_tier1 + gwp_tier2 + gwp_tier3
+            primary_share_pct = round((gwp_tier1 / pos_gwp_total) * 100, 1) if pos_gwp_total > 0 else 0.0
+
+            if enable_exiobase and "EXIOBASE_3" in bw.databases:
+                db_mode = "EXIOBASE 3 (Tier 2) + Tier 1/3 Active"
+            elif enable_exiobase:
+                db_mode = "Biosphere 3 + Heuristics (Tier 3) + Tier 1 Active"
+            else:
+                db_mode = "EXIOBASE Disabled (Tier 3 Relational DB Active)"
 
             sankey_data = self.get_sankey_data(
-                exchanges_list,
+                calc_list,
                 hotspots,
                 functional_unit_name=f"{int(functional_unit_volume_ml)}ml Reposado Tequila Bottle",
                 score_key="gwp_score"
             )
 
             water_sankey_data = self.get_sankey_data(
-                exchanges_list,
+                calc_list,
                 water_hotspots,
                 functional_unit_name=f"{int(functional_unit_volume_ml)}ml Reposado Tequila Bottle",
                 score_key="water_score"
@@ -343,19 +385,20 @@ class TequilaBWCalculator:
             return {
                 "project": self.project_name,
                 "bound_exchanges": bound_exchanges,
-                "gwp_score": round(gwp_score, 4),
-                "water_footprint_aware": round(water_total, 4),
+                "gwp_score": round(total_gwp, 4),
+                "water_footprint_aware": round(total_water, 4),
                 "biogenic_co2": biogenic_co2_kg,
                 "hotspots": hotspots,
                 "water_hotspots": water_hotspots,
                 "has_exiobase": has_exio,
+                "enable_exiobase": enable_exiobase,
                 "db_mode": db_mode,
                 "functional_unit_ml": functional_unit_volume_ml,
                 "glass_recycling_rate_pct": round(glass_recycling_rate * 100, 1),
+                "gwp_tier1": round(gwp_tier1, 4),
+                "gwp_tier2": round(gwp_tier2, 4),
+                "gwp_tier3": round(gwp_tier3, 4),
+                "primary_share_pct": primary_share_pct,
                 "sankey_data": sankey_data,
                 "water_sankey_data": water_sankey_data
             }
-
-
-
-

@@ -13,7 +13,6 @@
     </div>
 </div>
 
-
 <!-- Global Scenario Parameters Form -->
 <div class="card p-4 mb-4" id="control-panel-card">
     <div class="d-flex align-items-center justify-content-between mb-3">
@@ -21,17 +20,24 @@
         <span id="recalc-badge" class="badge bg-warning text-dark d-none px-3 py-2 fw-bold animate-fade" data-i18n="recalc_required">⚠️ Recalculation Required</span>
     </div>
     <form method="get" id="scenario-form" class="row g-3 align-items-center">
-        <div class="col-md-5">
+        <div class="col-md-4">
             <label class="form-label fw-bold small text-uppercase text-muted" data-i18n="functional_unit">Functional Unit Volume</label>
             {{ param_form.functional_unit }}
         </div>
-        <div class="col-md-5">
+        <div class="col-md-4">
             <label class="form-label fw-bold small text-uppercase text-muted" data-i18n="glass_recycling">Glass Recycling Rate (Slider)</label>
             {{ param_form.glass_recycling_rate }}
             <output class="fw-bold" style="color: #00f2fe;">{{ param_form.glass_recycling_rate.value|default:12 }}%</output>
         </div>
-        <div class="col-md-2 text-end mt-4">
-            <button type="submit" class="btn btn-primary w-100 fw-semibold" style="background: linear-gradient(135deg, #00f2fe, #4facfe); border: none; color: #0f172a;" data-i18n="recalculate">Recalculate</button>
+        <div class="col-md-4">
+            <label class="form-label fw-bold small text-uppercase text-muted">Data Architecture</label>
+            <div class="form-check form-switch mt-1">
+                {{ param_form.enable_exiobase }}
+                <label class="form-check-label text-light small fw-medium" for="{{ param_form.enable_exiobase.id_for_label }}">Enable EXIOBASE 3 (Tier 2)</label>
+            </div>
+        </div>
+        <div class="col-12 text-end mt-3 border-top border-secondary border-opacity-25 pt-2">
+            <button type="submit" class="btn btn-primary px-4 fw-semibold" style="background: linear-gradient(135deg, #00f2fe, #4facfe); border: none; color: #0f172a;" data-i18n="recalculate">Recalculate Scenario</button>
         </div>
     </form>
 </div>
@@ -53,19 +59,17 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card p-3 stat-card" style="--card-accent: #43e97b;">
+        <div class="card p-3 stat-card" style="--card-accent: #a18cd1;">
             <span class="text-muted small text-uppercase" data-i18n="biogenic_co2">Biogenic CO2 Emissions</span>
-            <h3 class="fw-bold my-1" style="color: #43e97b; text-shadow: 0 0 12px rgba(67, 233, 123, 0.3);">{{ results.biogenic_co2 }} <small class="fs-6 text-muted">kg</small></h3>
+            <h3 class="fw-bold my-1" style="color: #a18cd1; text-shadow: 0 0 12px rgba(161, 140, 209, 0.3);">{{ results.biogenic_co2 }} <small class="fs-6 text-muted">kg</small></h3>
             <span class="small text-muted">Fermentation stoichiometry</span>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card p-3 stat-card" style="--card-accent: #a18cd1;">
-            <span class="text-muted small text-uppercase" data-i18n="background_db">Background DB Mode</span>
-            <h6 class="fw-bold my-2">
-                <span class="badge bg-success" style="font-size: 0.85rem;">{{ results.db_mode }}</span>
-            </h6>
-            <span class="small text-muted">Glass Recycled: {{ results.glass_recycling_rate_pct }}%</span>
+        <div class="card p-3 stat-card" style="--card-accent: #43e97b;">
+            <span class="text-muted small text-uppercase" data-i18n="primary_data_share">Primary Data Share (Tier 1)</span>
+            <h3 class="fw-bold my-1" style="color: #43e97b; text-shadow: 0 0 12px rgba(67, 233, 123, 0.3);">{{ results.primary_share_pct }}% <small class="fs-6 text-muted">Verified</small></h3>
+            <span class="small text-muted" title="{{ results.db_mode }}">{{ results.db_mode|truncatechars:28 }}</span>
         </div>
     </div>
 </div>
@@ -93,7 +97,7 @@
     <div class="col-lg-6">
         <div class="card p-3 h-100 chart-container-card">
             <h5 class="fw-bold mb-3 text-white" data-i18n="process_flow_title">Lifecycle Process Flow (GWP)</h5>
-            <div id="sankeyDiagram" style="height: 250px;"></div>
+            <div id="sankeyDiagram" style="height: 650px;"></div>
         </div>
     </div>
 
@@ -101,7 +105,7 @@
     <div class="col-lg-6">
         <div class="card p-3 h-100 chart-container-card">
             <h5 class="fw-bold mb-3 text-white" data-i18n="water_process_flow_title">Water Process Flow (AWARE)</h5>
-            <div id="waterSankeyDiagram" style="height: 250px;"></div>
+            <div id="waterSankeyDiagram" style="height: 650px;"></div>
         </div>
     </div>
 </div>
@@ -113,6 +117,7 @@
             <thead>
                 <tr>
                     <th data-i18n="col_process">Lifecycle Process / Credit</th>
+                    <th data-i18n="col_tier">Data Source Tier</th>
                     <th class="text-end" data-i18n="col_gwp">GWP Impact (kg CO2-eq)</th>
                     <th class="text-end" data-i18n="col_share">GWP Share (%)</th>
                     <th class="text-end" data-i18n="col_water">AWARE Water Impact (m3 world-eq)</th>
@@ -123,6 +128,15 @@
                 {% for h in combined_hotspots %}
                 <tr>
                     <td>{{ h.stage }}</td>
+                    <td>
+                        {% if "Supplier" in h.data_tier %}
+                    <span class="badge" style="background-color: #43e97b; color: #0f172a; font-weight: 600;">{{ h.data_tier }}</span>
+                        {% elif "EXIOBASE" in h.data_tier %}
+                    <span class="badge" style="background-color: #00f2fe; color: #0f172a; font-weight: 600;">{{ h.data_tier }}</span>
+                        {% else %}
+                    <span class="badge bg-warning text-dark" style="font-weight: 600;">{{ h.data_tier }}</span>
+                        {% endif %}
+                    </td>
                     <td class="text-end {% if h.gwp_score < 0 %}text-success fw-bold{% endif %}">{{ h.gwp_score }}</td>
                     <td class="text-end fw-bold" style="color: #00f2fe;">{{ h.gwp_pct }}%</td>
                     <td class="text-end {% if h.water_score < 0 %}text-success fw-bold{% endif %}">{{ h.water_score }}</td>
@@ -130,7 +144,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5" class="text-center text-muted">No inventory exchanges found.</td>
+                    <td colspan="6" class="text-center text-muted">No inventory exchanges found.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -287,10 +301,10 @@
             }
         }];
         const sankeyLayout = { 
-            margin: { l: 10, r: 10, t: 10, b: 10 },
+            margin: { l: 50, r: 50, t: 20, b: 20 },
             paper_bgcolor: 'rgba(0,0,0,0)',
             plot_bgcolor: 'rgba(0,0,0,0)',
-            font: { color: '#ffffff', family: 'Inter, sans-serif' }
+            font: { color: '#ffffff', family: 'Inter, sans-serif', size: 11 }
         };
         const sankeyDiv = document.getElementById('sankeyDiagram');
         Plotly.newPlot(sankeyDiv, sankeyData, sankeyLayout, {responsive: true, displayModeBar: false});
