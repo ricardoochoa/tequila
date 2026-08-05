@@ -137,6 +137,19 @@
     },
     "fields": [
       {
+        "django_field": "total_tequila_produced",
+        "type": "FloatField",
+        "capture_unit": "L",
+        "mapping_type": "product_output",
+        "exiobase_code": null,
+        "exiobase_name": "N/A",
+        "exiobase_unit": null,
+        "conversion_factor": null,
+        "fallback_recommended": false,
+        "ui_label_es": "Producción Total de Tequila",
+        "ui_description_es": "Ingrese la cantidad total de tequila producido en la instalación durante el periodo de reporte. Registre el valor en litros (L)."
+      },
+      {
         "django_field": "agave_milled_ton",
         "type": "FloatField",
         "capture_unit": "t",
