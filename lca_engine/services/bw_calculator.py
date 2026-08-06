@@ -265,8 +265,8 @@ class TequilaBWCalculator:
                     if fname in ["agave_harvested_ton", "cultivated_area", "bagasse_generated_ton"]:
                         s_gwp = 0.0
                         s_water = 0.0
-                        hotspots.append({"stage": label, "gwp_score": s_gwp, "data_tier": "Intermediate Parameter"})
-                        water_hotspots.append({"stage": label, "water_score": s_water, "data_tier": "Intermediate Parameter"})
+                        #hotspots.append({"stage": label, "gwp_score": s_gwp, "data_tier": "Intermediate Parameter"})
+                        #water_hotspots.append({"stage": label, "water_score": s_water, "data_tier": "Intermediate Parameter"})
                         calc_list.append({"name": label, "category": cat_name, "amount": computed_amount, "type": "technosphere"})
                         continue
 
