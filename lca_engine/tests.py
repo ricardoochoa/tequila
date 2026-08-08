@@ -170,12 +170,40 @@ class LCAEngineTests(TestCase):
         self.assertIn("Tier 3 (Fallback)", csv_text_off)
 
     def test_hotspot_csv_generator(self):
-        hotspots = [{"stage": "Glass Bottle", "gwp_score": 0.42, "pct": 45.2}]
-        water_hotspots = [{"stage": "Glass Bottle", "water_score": 0.06, "pct": 12.5}]
+        hotspots = [{"stage": "Glass Bottle", "gwp_score": 0.42, "pct": 45.2, "data_tier": "Tier 2 (EXIOBASE)"}]
+        water_hotspots = [{"stage": "Glass Bottle", "water_score": 0.06, "pct": 12.5, "data_tier": "Tier 1 (Supplier)"}]
         csv_str = generate_hotspot_csv(hotspots, water_hotspots)
         self.assertIn("Glass Bottle", csv_str)
         self.assertIn("Absolute GWP (kg CO2-eq)", csv_str)
+        self.assertIn("GWP Data Tier", csv_str)
+        self.assertIn("Water Data Tier", csv_str)
         self.assertIn("AWARE Water (m3 world-eq)", csv_str)
+        self.assertIn("Tier 2 (EXIOBASE)", csv_str)
+        self.assertIn("Tier 1 (Supplier)", csv_str)
+
+    def test_groundwater_aware_scaling_range(self):
+        calculator = TequilaBWCalculator()
+        payload = get_default_captured_payload()
+        payload["groundwater_m3"] = {"amount": 15342.0, "tier1_factor": None, "tier1_water_factor": None}
+        payload["total_tequila_produced"] = {"amount": 1500000.0, "tier1_factor": None}
+
+        results = calculator.calculate_lca(payload, enable_exiobase=False)
+        gw_water = next(wh for wh in results["water_hotspots"] if "Extracción de Agua Subterránea" in wh["stage"] or "groundwater_m3" in wh["stage"])
+
+        # 15,342 m3 groundwater with factor 88.0 m3 eq/m3 allocated over 1.5M liters (700ml bottle)
+        # Expected score is ~0.6300 m3 world-eq, strictly less than 10.0 m3 world-eq (preventing 1,000,000x overestimation bug)
+        self.assertLess(gw_water["water_score"], 10.0)
+        self.assertGreater(gw_water["water_score"], 0.1)
+
+    def test_hotspot_csv_decoupled_data_tiers(self):
+        hotspots = [{"stage": "Groundwater Extraction", "gwp_score": 0.0, "pct": 0.0, "data_tier": "Tier 3 (Fallback)"}]
+        water_hotspots = [{"stage": "Groundwater Extraction", "water_score": 0.63, "pct": 100.0, "data_tier": "Tier 1 (Supplier)"}]
+        csv_str = generate_hotspot_csv(hotspots, water_hotspots)
+        
+        self.assertIn("GWP Data Tier", csv_str)
+        self.assertIn("Water Data Tier", csv_str)
+        self.assertIn("Tier 3 (Fallback)", csv_str)
+        self.assertIn("Tier 1 (Supplier)", csv_str)
 
     def test_benchmark_view_status_code(self):
         response = self.client.get(reverse("benchmark"))

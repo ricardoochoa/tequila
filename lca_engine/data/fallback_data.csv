@@ -13,4 +13,4 @@ vinasse_cod_mg_l,2019,0.000005,kg CO2e / L,GWP100,"IPCC 2019, Vol 5, Ch 6 (Waste
 bagasse_boiler_pct,2021,-0.22,kg CO2e / kg,GWP100,"IPCC 2019 / Bio-energy Credit","Sustitución de energía en calderas de biomasa."
 solid_waste_recycled_t,2020,-3.098,kg CO2e / kg,GWP100,"EPA WARM v15 (Mixed Recyclables)","Crédito de -2.81 Toneladas Cortas CO2e/tonelada corta convertido a toneladas métricas. Refleja emisiones evitadas por el procesamiento de reciclables mixtos."
 municipal_water_m3,2026,0.0428,m3 eq / L,AWARE,"Boulay et al. (2018)","Country average non-agri AWARE factor for MX (42.8 m3/m3) scaled by 1/1000 for Django LCI conversion."
-groundwater_m3,2026,88000000.0,m3 eq / Mm3,AWARE,"Boulay et al. (2018)","Country average unspecified AWARE factor for MX (88.0 m3/m3) scaled by 1/1e-6 for EXIOBASE Mm3 conversion."
+groundwater_m3,2026,88.0,m3 eq / m3,AWARE,"Boulay et al. (2018)","Country average unspecified AWARE factor for MX (88.0 m3/m3) for raw m3 Django LCI conversion."

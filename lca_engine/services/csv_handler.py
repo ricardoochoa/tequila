@@ -203,7 +203,7 @@ def generate_hotspot_csv(
     water_hotspots: Optional[List[Dict[str, Any]]] = None
 ) -> str:
     """
-    Generates CSV string output combining GWP and Water hotspot results.
+    Generates CSV string output combining GWP and Water hotspot results with decoupled data tier attribution.
     """
     water_lookup = {}
     if water_hotspots:
@@ -219,9 +219,10 @@ def generate_hotspot_csv(
         wh = water_lookup.get(stage, {})
         merged_data.append({
             "Lifecycle Stage": stage,
-            "Data Tier": h.get("data_tier", "Fallback"),
+            "GWP Data Tier": h.get("data_tier", "Fallback"),
             "Absolute GWP (kg CO2-eq)": h.get("gwp_score", 0.0),
             "GWP Contribution (%)": h.get("pct", 0.0),
+            "Water Data Tier": wh.get("data_tier", "Fallback") if wh else "N/A",
             "AWARE Water (m3 world-eq)": wh.get("water_score", 0.0),
             "Water Contribution (%)": wh.get("pct", 0.0),
         })
@@ -232,9 +233,10 @@ def generate_hotspot_csv(
             if stage not in seen_stages:
                 merged_data.append({
                     "Lifecycle Stage": stage,
-                    "Data Tier": wh.get("data_tier", "Fallback"),
+                    "GWP Data Tier": "N/A",
                     "Absolute GWP (kg CO2-eq)": 0.0,
                     "GWP Contribution (%)": 0.0,
+                    "Water Data Tier": wh.get("data_tier", "Fallback"),
                     "AWARE Water (m3 world-eq)": wh.get("water_score", 0.0),
                     "Water Contribution (%)": wh.get("pct", 0.0),
                 })
@@ -243,9 +245,10 @@ def generate_hotspot_csv(
     if df.empty:
         df = pd.DataFrame(columns=[
             "Lifecycle Stage",
-            "Data Tier",
+            "GWP Data Tier",
             "Absolute GWP (kg CO2-eq)",
             "GWP Contribution (%)",
+            "Water Data Tier",
             "AWARE Water (m3 world-eq)",
             "Water Contribution (%)"
         ])
