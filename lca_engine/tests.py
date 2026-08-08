@@ -255,3 +255,31 @@ class LCAEngineTests(TestCase):
         self.assertLess(waste_hotspot["gwp_score"], 0.0)
         self.assertGreater(waste_hotspot["gwp_score"], -10.0)
 
+    def test_tier1_water_factor_calculation(self):
+        calculator = TequilaBWCalculator()
+        payload = get_default_captured_payload()
+        payload["groundwater_m3"] = {"amount": 100.0, "tier1_factor": 0.2, "tier1_water_factor": 50.0}
+
+        results = calculator.calculate_lca(payload, enable_exiobase=False)
+        gw_water = next(wh for wh in results["water_hotspots"] if "Extracción de Agua Subterránea" in wh["stage"] or "groundwater_m3" in wh["stage"])
+
+        self.assertEqual(gw_water["data_tier"], "Tier 1 (Supplier)")
+        self.assertGreater(gw_water["water_score"], 0.0)
+
+    def test_tier2_exiobase_water_factor_calculation(self):
+        from unittest.mock import patch, MagicMock
+        calculator = TequilaBWCalculator()
+        payload = get_default_captured_payload()
+        payload["groundwater_m3"] = {"amount": 100.0, "tier1_factor": None, "tier1_water_factor": None}
+
+        mock_db = MagicMock()
+        mock_db.search.return_value = [MagicMock(key=("EXIOBASE_3", "1262"))]
+
+        with patch("brightway2.databases", {"EXIOBASE_3": True}):
+            with patch("brightway2.Database", return_value=mock_db):
+                results = calculator.calculate_lca(payload, enable_exiobase=True)
+                gw_water = next(wh for wh in results["water_hotspots"] if "Extracción de Agua Subterránea" in wh["stage"] or "groundwater_m3" in wh["stage"])
+                self.assertEqual(gw_water["data_tier"], "Tier 2 (EXIOBASE)")
+                self.assertGreater(gw_water["water_score"], 0.0)
+
+

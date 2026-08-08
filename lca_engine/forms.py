@@ -112,9 +112,11 @@ class DynamicInventoryForm(forms.Form):
                 fname = field["django_field"]
                 val = cleaned.get(fname)
                 tier1_val = cleaned.get(f"{fname}_tier1")
+                existing_water = self.payload.get(fname, {}).get("tier1_water_factor") if isinstance(self.payload.get(fname), dict) else None
                 result[fname] = {
                     "amount": val if val is not None else 0.0,
-                    "tier1_factor": tier1_val if tier1_val is not None else None
+                    "tier1_factor": tier1_val if tier1_val is not None else None,
+                    "tier1_water_factor": existing_water
                 }
         return result
 

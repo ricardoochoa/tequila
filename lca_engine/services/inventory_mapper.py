@@ -103,7 +103,7 @@ def get_default_captured_payload() -> Dict[str, Any]:
         "ref_r134a_leaked_kg": {"amount": 0.0, "tier1_factor": None},
         "glass_bottles_kg": {"amount": 1178571.0, "tier1_factor": 1.1},
         "cardboard_boxes_kg": {"amount": 257142.0, "tier1_factor": None},
-        "groundwater_m3": {"amount": 15342.0, "tier1_factor": 0.65},
+        "groundwater_m3": {"amount": 15342.0, "tier1_factor": 0.65, "tier1_water_factor": 42.1},
         "municipal_water_m3": {"amount": 0.0, "tier1_factor": None},
         "precipitation_mm": {"amount": 850.0, "tier1_factor": None},
         "evapotranspiration_mm": {"amount": 42.1, "tier1_factor": None},

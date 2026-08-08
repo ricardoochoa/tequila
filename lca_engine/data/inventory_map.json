@@ -329,7 +329,7 @@
         "exiobase_code": "1262",
         "exiobase_name": "Water Withdrawal Blue - Manufacturing - Beverages",
         "exiobase_unit": "Mm3",
-        "conversion_factor": 1e-06,
+        "conversion_factor": 1.0,
         "fallback_recommended": false,
         "notes": "EXIOBASE utiliza millones de metros cúbicos (Mm3) en sus tablas de estresores hídricos. Un factor de 1e-6 convierte m3 a Mm3.",
         "ui_label_es": "Extracción de Agua Subterránea",

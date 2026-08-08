@@ -12,3 +12,5 @@ evapotranspiration_mm,2018,421.0,m3 eq / ha,AWARE,"WULCA AWARE (Boulay et al., 2
 vinasse_cod_mg_l,2019,0.000005,kg CO2e / L,GWP100,"IPCC 2019, Vol 5, Ch 6 (Wastewater Treatment)","MCF=0.8 (fosa profunda), B0=0.25 kg CH4/kg DQO, GWP(CH4)=25. Genera 5 kg CO2e por kg de DQO. Para 1 mg/L, el factor por litro es 5 * 10^-6."
 bagasse_boiler_pct,2021,-0.22,kg CO2e / kg,GWP100,"IPCC 2019 / Bio-energy Credit","Sustitución de energía en calderas de biomasa."
 solid_waste_recycled_t,2020,-3.098,kg CO2e / kg,GWP100,"EPA WARM v15 (Mixed Recyclables)","Crédito de -2.81 Toneladas Cortas CO2e/tonelada corta convertido a toneladas métricas. Refleja emisiones evitadas por el procesamiento de reciclables mixtos."
+municipal_water_m3,2026,0.0428,m3 eq / L,AWARE,"Boulay et al. (2018)","Country average non-agri AWARE factor for MX (42.8 m3/m3) scaled by 1/1000 for Django LCI conversion."
+groundwater_m3,2026,88000000.0,m3 eq / Mm3,AWARE,"Boulay et al. (2018)","Country average unspecified AWARE factor for MX (88.0 m3/m3) scaled by 1/1e-6 for EXIOBASE Mm3 conversion."

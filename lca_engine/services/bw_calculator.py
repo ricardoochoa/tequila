@@ -133,17 +133,18 @@ class TequilaBWCalculator:
             for item in payload_or_exchanges:
                 s_name = item.get("name", "").lower()
                 supp_gwp = item.get("supplier_gwp_factor")
+                supp_water = item.get("supplier_water_factor")
                 raw_amt = float(item.get("amount", 0.0))
                 if "agave" in s_name:
-                    captured_payload["agave_harvested_ton"] = {"amount": raw_amt, "tier1_factor": supp_gwp}
+                    captured_payload["agave_harvested_ton"] = {"amount": raw_amt, "tier1_factor": supp_gwp, "tier1_water_factor": supp_water}
                 elif "glass" in s_name or "bottle" in s_name:
-                    captured_payload["glass_bottles_kg"] = {"amount": raw_amt, "tier1_factor": supp_gwp}
+                    captured_payload["glass_bottles_kg"] = {"amount": raw_amt, "tier1_factor": supp_gwp, "tier1_water_factor": supp_water}
                 elif "electricity" in s_name:
-                    captured_payload["grid_electricity_kwh"] = {"amount": raw_amt, "tier1_factor": supp_gwp}
+                    captured_payload["grid_electricity_kwh"] = {"amount": raw_amt, "tier1_factor": supp_gwp, "tier1_water_factor": supp_water}
                 elif "fuel" in s_name:
-                    captured_payload["fuel_oil_liters"] = {"amount": raw_amt, "tier1_factor": supp_gwp}
+                    captured_payload["fuel_oil_liters"] = {"amount": raw_amt, "tier1_factor": supp_gwp, "tier1_water_factor": supp_water}
                 elif "water" in s_name:
-                    captured_payload["groundwater_m3"] = {"amount": raw_amt, "tier1_factor": supp_gwp}
+                    captured_payload["groundwater_m3"] = {"amount": raw_amt, "tier1_factor": supp_gwp, "tier1_water_factor": supp_water}
         elif isinstance(payload_or_exchanges, dict) and payload_or_exchanges:
             captured_payload = payload_or_exchanges
         else:
@@ -163,6 +164,17 @@ class TequilaBWCalculator:
             entry = captured_payload.get(f_key, {})
             if isinstance(entry, dict):
                 val = entry.get("tier1_factor")
+                if val is not None and str(val).strip() != "":
+                    try:
+                        return float(val)
+                    except (ValueError, TypeError):
+                        return None
+            return None
+
+        def get_t1_water(f_key: str) -> Optional[float]:
+            entry = captured_payload.get(f_key, {})
+            if isinstance(entry, dict):
+                val = entry.get("tier1_water_factor")
                 if val is not None and str(val).strip() != "":
                     try:
                         return float(val)
@@ -233,6 +245,7 @@ class TequilaBWCalculator:
                     label = f_info.get("ui_label_es", fname)
                     raw_amount = get_amt(fname)
                     t1_factor = get_t1(fname)
+                    t1_water_factor = get_t1_water(fname)
                     conv_factor = f_info.get("conversion_factor") or 1.0
                     fallback_rec = f_info.get("fallback_recommended", False)
                     exio_code = f_info.get("exiobase_code")
@@ -282,26 +295,30 @@ class TequilaBWCalculator:
                     bound = False
 
                     # STEP 1: TIER 1 (Supplier Direct Factor)
-                    if t1_factor is not None:
-                        factor_gwp = t1_factor
+                    if t1_factor is not None or t1_water_factor is not None:
                         data_tier = "Tier 1 (Supplier)"
-                        if cat_name == "WaterResource":
-                            factor_water = t1_factor
+                        if t1_factor is not None:
+                            factor_gwp = t1_factor
+                        if t1_water_factor is not None:
+                            factor_water = t1_water_factor
 
                     # STEP 2: TIER 2 (EXIOBASE Search if fallback_recommended is False)
                     elif not fallback_rec and enable_exiobase and exio_db and exio_code:
                         try:
                             results = exio_db.search(exio_code) or exio_db.search(exio_name)
                             if results:
+                                exio_unit = f_info.get("exiobase_unit")
+                                exio_scale = 1e-06 if exio_unit == "Mm3" else conv_factor
                                 tequila_act.new_exchange(
                                     input=results[0].key,
-                                    amount=computed_amount * conv_factor,
+                                    amount=computed_amount * exio_scale,
                                     type="technosphere"
                                 ).save()
                                 bound_exchanges += 1
                                 bound = True
                                 data_tier = "Tier 2 (EXIOBASE)"
                                 factor_gwp = 0.15 if cat_name != "WaterResource" else 0.05
+                                factor_water = 42.1 if cat_name == "WaterResource" else 0.0
                         except Exception:
                             bound = False
 
