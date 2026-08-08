@@ -150,7 +150,7 @@ class TequilaBWCalculator:
             return ('AWARE', 'water use', 'agricultural and industrial')
         return None
 
-    def calculate_lca(
+def calculate_lca(
         self,
         payload_or_exchanges: Any,
         functional_unit_volume_ml: float = 700.0,
@@ -160,11 +160,10 @@ class TequilaBWCalculator:
     ) -> Dict[str, Any]:
         """
         Executes LCI & LCIA using inventory_map.json and captured_payload.
-        Follows a strict 3-Tier Decision Tree with Brightway2 matrix LCIA engine.
+        Follows a strict, decoupled 3-Tier Decision Tree with Brightway2 matrix LCIA engine.
         """
         from lca_engine.models import FallbackEmissionFactor
 
-        # Convert list format to captured_payload if legacy exchanges_list is passed
         if isinstance(payload_or_exchanges, list):
             captured_payload = get_default_captured_payload()
             for item in payload_or_exchanges:
@@ -291,64 +290,31 @@ class TequilaBWCalculator:
                     exio_code = f_info.get("exiobase_code")
                     exio_name = f_info.get("exiobase_name")
 
-                    # Handle dynamic quantities & conversions
                     computed_amount = raw_amount * vol_scale
 
                     if fname == "glass_bottles_kg":
                         computed_amount = computed_amount * (1.0 - (glass_recycling_rate * 0.4))
-
                     if fname == "evapotranspiration_mm":
-                        # 1 mm ET per ha = 10 m3 water
                         computed_amount = raw_amount * cultivated_area_ha * 10.0 * vol_scale
-
                     if fname == "agave_transport_km":
-                        # tkm = agave mass (t) * distance (km)
                         computed_amount = agave_harvested_ton * raw_amount * vol_scale
-
-                    if fname == "bagasse_boiler_pct":
+                    if fname in ["bagasse_boiler_pct", "bagasse_compost_pct", "bagasse_landfill_pct"]:
                         computed_amount = bagasse_gen_ton * (raw_amount / 100.0) * vol_scale
 
-                    if fname == "bagasse_compost_pct":
-                        computed_amount = bagasse_gen_ton * (raw_amount / 100.0) * vol_scale
-
-                    if fname == "bagasse_landfill_pct":
-                        computed_amount = bagasse_gen_ton * (raw_amount / 100.0) * vol_scale
-
-                    # Intermediate variables: set direct calculated impact to 0.0
                     if fname in ["agave_harvested_ton", "cultivated_area", "bagasse_generated_ton"]:
-                        s_gwp = 0.0
-                        s_water = 0.0
-                        hotspots.append({"stage": label, "gwp_score": s_gwp, "data_tier": "Intermediate Parameter"})
-                        water_hotspots.append({"stage": label, "water_score": s_water, "data_tier": "Intermediate Parameter"})
+                        hotspots.append({"stage": label, "gwp_score": 0.0, "data_tier": "Intermediate Parameter"})
+                        water_hotspots.append({"stage": label, "water_score": 0.0, "data_tier": "Intermediate Parameter"})
                         calc_list.append({"name": label, "category": cat_name, "amount": computed_amount, "type": "technosphere"})
                         continue
 
                     if computed_amount <= 0.0:
                         continue
 
-                    # -------------------------------------------------------------
-                    # 3-TIER DECISION TREE WITH ISOLATED GWP100 vs AWARE INDICATORS
-                    # -------------------------------------------------------------
-                    data_tier = "Tier 3 (Fallback)"
                     bound = False
-
-                    # STEP 1: TIER 1 (Supplier Direct Factor)
-                    if t1_factor is not None or t1_water_factor is not None:
-                        data_tier = "Tier 1 (Supplier)"
-                        s_gwp = round((computed_amount * conv_factor) * (t1_factor if t1_factor is not None else 0.0), 4)
-                        s_water = round((computed_amount * conv_factor) * (t1_water_factor if t1_water_factor is not None else 0.0), 4)
-
-                        total_gwp += s_gwp
-                        total_water += s_water
-                        gwp_tier1 += max(0.0, s_gwp)
-
-                        hotspots.append({"stage": label, "gwp_score": s_gwp, "data_tier": data_tier})
-                        water_hotspots.append({"stage": label, "water_score": s_water, "data_tier": data_tier})
-                        calc_list.append({"name": label, "category": cat_name, "amount": computed_amount, "type": "technosphere"})
-                        bound = True
-
-                    # STEP 2: TIER 2 (EXIOBASE Search if fallback_recommended is False)
-                    elif not fallback_rec and enable_exiobase and exio_db and exio_code and tequila_act:
+                    
+                    # STEP 1: Attempt EXIOBASE (Tier 2) Binding FIRST
+                    # We bind it if allowed, and independently decide during calculation if we override it with Tier 1
+                    if not fallback_rec and enable_exiobase and exio_db and exio_code and tequila_act:
                         try:
                             results = exio_db.search(exio_code) or exio_db.search(exio_name)
                             if results:
@@ -362,24 +328,26 @@ class TequilaBWCalculator:
                                 ).save()
                                 bound_exchanges += 1
                                 bound = True
-                                data_tier = "Tier 2 (EXIOBASE)"
                                 input_key = results[0].key
+                                
                                 meta = {
                                     "label": label,
                                     "category": cat_name,
-                                    "data_tier": data_tier,
                                     "computed_amount": computed_amount,
                                     "conv_factor": conv_factor,
                                     "exc_amount": exc_amount,
-                                    "field_name": fname
+                                    "field_name": fname,
+                                    "t1_gwp": t1_factor,
+                                    "t1_water": t1_water_factor
                                 }
                                 bound_exchange_map[input_key] = meta
                                 bound_exchanges_list.append(meta)
                                 calc_list.append({"name": label, "category": cat_name, "amount": computed_amount, "type": "technosphere"})
+                                continue # Matrix step will handle evaluation for this exchange
                         except Exception:
                             bound = False
 
-                    # STEP 3 & STEP 5: TIER 3 (Relational DB Fallback in SQLite)
+                    # STEP 2: Decoupled Non-Matrix Evaluation (Tier 1 vs Tier 3)
                     if not bound:
                         fb_q = FallbackEmissionFactor.objects.filter(django_field=fname)
                         year_records = list(fb_q.filter(reporting_year=reporting_year))
@@ -387,37 +355,46 @@ class TequilaBWCalculator:
 
                         factor_gwp = 0.0
                         factor_water = 0.0
+                        data_tier_gwp = "Tier 3 (Fallback)"
+                        data_tier_water = "Tier 3 (Fallback)"
 
                         if fb_records:
-                            data_tier = "Tier 3 (Fallback)"
                             for record in fb_records:
                                 if record.indicator == "GWP100":
                                     factor_gwp = record.emission_factor
                                 elif record.indicator == "AWARE":
                                     factor_water = record.emission_factor
+                        elif fallback_rec:
+                            raise ValueError(f"Tier 3 fallback factor missing in database for field '{fname}' for reporting year {reporting_year}.")
                         else:
-                            if fallback_rec:
-                                raise ValueError(
-                                    f"Tier 3 fallback factor missing in database for field '{fname}' "
-                                    f"for reporting year {reporting_year}."
-                                )
-                            else:
-                                factor_gwp = 0.0
-                                factor_water = 0.0
-                                data_tier = "Tier 2 (Default)"
+                            data_tier_gwp = "Tier 2 (Default)"
+                            data_tier_water = "Tier 2 (Default)"
+
+                        # Apply Independent Tier 1 Overrides
+                        if t1_factor is not None:
+                            factor_gwp = t1_factor
+                            data_tier_gwp = "Tier 1 (Supplier)"
+                            
+                        if t1_water_factor is not None:
+                            factor_water = t1_water_factor
+                            data_tier_water = "Tier 1 (Supplier)"
 
                         s_gwp = round((computed_amount * conv_factor) * factor_gwp, 4)
                         s_water = round((computed_amount * conv_factor) * factor_water, 4)
 
                         total_gwp += s_gwp
                         total_water += s_water
-                        gwp_tier3 += max(0.0, s_gwp)
+                        
+                        if data_tier_gwp == "Tier 1 (Supplier)":
+                            gwp_tier1 += max(0.0, s_gwp)
+                        else:
+                            gwp_tier3 += max(0.0, s_gwp)
 
-                        hotspots.append({"stage": label, "gwp_score": s_gwp, "data_tier": data_tier})
-                        water_hotspots.append({"stage": label, "water_score": s_water, "data_tier": data_tier})
+                        hotspots.append({"stage": label, "gwp_score": s_gwp, "data_tier": data_tier_gwp})
+                        water_hotspots.append({"stage": label, "water_score": s_water, "data_tier": data_tier_water})
                         calc_list.append({"name": label, "category": cat_name, "amount": computed_amount, "type": "technosphere"})
 
-            # STEPS 1, 2 & 4: EXECUTE MATRIX LCIA & PROCESS CONTRIBUTION FOR BOUND EXCHANGES
+            # STEP 3: Execute Matrix LCIA & Process Contribution with Independent Overrides
             if tequila_act and bound_exchanges > 0:
                 lca_gwp = None
                 lca_water = None
@@ -453,50 +430,81 @@ class TequilaBWCalculator:
                                 unprocessed_metas.remove(meta)
 
                             label = meta.get("label", str(exc.input)) if meta else str(exc.input)
-                            data_tier = meta.get("data_tier", "Tier 2 (EXIOBASE)") if meta else "Tier 2 (EXIOBASE)"
-
+                            
                             demand_dict = {exc.input: exc["amount"]}
                             lca_gwp.redo_lcia(demand_dict)
                             lca_water.redo_lcia(demand_dict)
 
-                            exc_gwp = round(float(lca_gwp.score), 4)
-                            exc_water = round(float(lca_water.score), 4)
+                            # Decoupled Matrix Results vs Tier 1 Override
+                            t1_gwp = meta.get("t1_gwp") if meta else None
+                            t1_water = meta.get("t1_water") if meta else None
+
+                            if t1_gwp is not None:
+                                exc_gwp = round((meta["computed_amount"] * meta["conv_factor"]) * t1_gwp, 4)
+                                data_tier_gwp = "Tier 1 (Supplier)"
+                                gwp_tier1 += max(0.0, exc_gwp)
+                            else:
+                                exc_gwp = round(float(lca_gwp.score), 4)
+                                data_tier_gwp = "Tier 2 (EXIOBASE)"
+                                gwp_tier2 += max(0.0, exc_gwp)
+
+                            if t1_water is not None:
+                                exc_water = round((meta["computed_amount"] * meta["conv_factor"]) * t1_water, 4)
+                                data_tier_water = "Tier 1 (Supplier)"
+                            else:
+                                exc_water = round(float(lca_water.score), 4)
+                                data_tier_water = "Tier 2 (EXIOBASE)"
 
                             total_gwp += exc_gwp
                             total_water += exc_water
-                            gwp_tier2 += max(0.0, exc_gwp)
 
-                            hotspots.append({"stage": label, "gwp_score": exc_gwp, "data_tier": data_tier})
-                            water_hotspots.append({"stage": label, "water_score": exc_water, "data_tier": data_tier})
+                            hotspots.append({"stage": label, "gwp_score": exc_gwp, "data_tier": data_tier_gwp})
+                            water_hotspots.append({"stage": label, "water_score": exc_water, "data_tier": data_tier_water})
                     except Exception as e:
                         logger.warning(f"Error calculating contribution via redo_lcia: {e}")
 
-                # Fallback for bound exchanges if matrix calculation failed or was mocked
+                # Matrix Fallback with Non-Zero Background Proxy
                 for meta in unprocessed_metas:
                     label = meta["label"]
                     cat_name = meta["category"]
-                    data_tier = meta["data_tier"]
                     computed_amount = meta["computed_amount"]
                     conv_factor = meta["conv_factor"]
+                    t1_gwp = meta.get("t1_gwp")
+                    t1_water = meta.get("t1_water")
 
+                    # Representative background proxies instead of 0.0
                     factor_gwp = 0.15 if cat_name != "WaterResource" else 0.05
-                    factor_water = 42.1 if cat_name == "WaterResource" else 0.0
+                    factor_water = 0.25 if cat_name != "WaterResource" else 42.1 
+
+                    if t1_gwp is not None:
+                        factor_gwp = t1_gwp
+                        data_tier_gwp = "Tier 1 (Supplier)"
+                    else:
+                        data_tier_gwp = "Tier 2 (Default Proxy)"
+
+                    if t1_water is not None:
+                        factor_water = t1_water
+                        data_tier_water = "Tier 1 (Supplier)"
+                    else:
+                        data_tier_water = "Tier 2 (Default Proxy)"
 
                     exc_gwp = round((computed_amount * conv_factor) * factor_gwp, 4)
                     exc_water = round((computed_amount * conv_factor) * factor_water, 4)
 
                     total_gwp += exc_gwp
                     total_water += exc_water
-                    gwp_tier2 += max(0.0, exc_gwp)
+                    
+                    if data_tier_gwp == "Tier 1 (Supplier)":
+                        gwp_tier1 += max(0.0, exc_gwp)
+                    else:
+                        gwp_tier2 += max(0.0, exc_gwp)
 
-                    hotspots.append({"stage": label, "gwp_score": exc_gwp, "data_tier": data_tier})
-                    water_hotspots.append({"stage": label, "water_score": exc_water, "data_tier": data_tier})
+                    hotspots.append({"stage": label, "gwp_score": exc_gwp, "data_tier": data_tier_gwp})
+                    water_hotspots.append({"stage": label, "water_score": exc_water, "data_tier": data_tier_water})
 
-            # Biogenic CO2 Stoichiometry: Agave juice fermentation (6% ABV -> Moles CO2)
             agave_kg = agave_harvested_ton * 1000.0 * vol_scale
             biogenic_co2_kg = round(agave_kg * 0.0317, 4)
 
-            # Hotspot Percentages
             total_sum = sum(max(0, h["gwp_score"]) for h in hotspots) or 1.0
             for h in hotspots:
                 h["pct"] = round((h["gwp_score"] / total_sum) * 100, 2) if h["gwp_score"] > 0 else 0.0

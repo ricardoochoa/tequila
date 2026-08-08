@@ -103,6 +103,13 @@ def parse_key_value_lci_csv(file_obj) -> Tuple[Dict[str, Any], List[str]]:
             errors.append(f"Fila {row_num}: La variable '{var_name}' no es una clave reconocida del Diccionario Oficial de LCI.")
             continue
 
+        # Extract existing Tier 1 overrides (GWP and AWARE) to prevent data loss during upload
+        existing_tier1_gwp = None
+        existing_tier1_water = None
+        if isinstance(payload.get(var_name), dict):
+            existing_tier1_gwp = payload[var_name].get("tier1_factor")
+            existing_tier1_water = payload[var_name].get("tier1_water_factor")
+
         # RULE 2: Type Casting & Choice Mapping
         if var_name == "vinasse_treatment":
             val_str = str(raw_val).strip().lower() if pd.notna(raw_val) else ""
@@ -116,8 +123,12 @@ def parse_key_value_lci_csv(file_obj) -> Tuple[Dict[str, Any], List[str]]:
             elif "fosa" in val_str or "pit" in val_str or "abierta" in val_str:
                 mapped_choice = "pit"
 
-            existing_tier1 = payload.get(var_name, {}).get("tier1_factor") if isinstance(payload.get(var_name), dict) else None
-            payload[var_name] = {"amount": mapped_choice, "tier1_factor": existing_tier1, "notes": notes}
+            payload[var_name] = {
+                "amount": mapped_choice, 
+                "tier1_factor": existing_tier1_gwp, 
+                "tier1_water_factor": existing_tier1_water,
+                "notes": notes
+            }
         else:
             if pd.isna(raw_val) or str(raw_val).strip() == "":
                 num_val = 0.0
@@ -128,8 +139,12 @@ def parse_key_value_lci_csv(file_obj) -> Tuple[Dict[str, Any], List[str]]:
                     errors.append(f"Fila {row_num} ({var_name}): El valor '{raw_val}' no es un número válido.")
                     continue
 
-            existing_tier1 = payload.get(var_name, {}).get("tier1_factor") if isinstance(payload.get(var_name), dict) else None
-            payload[var_name] = {"amount": num_val, "tier1_factor": existing_tier1, "notes": notes}
+            payload[var_name] = {
+                "amount": num_val, 
+                "tier1_factor": existing_tier1_gwp, 
+                "tier1_water_factor": existing_tier1_water,
+                "notes": notes
+            }
 
     # RULE 3: Constraint Checking (Bagasse Sum <= 100%)
     def get_p_val(key: str) -> float:
