@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Tequila LCA Studio Enterprise{% endblock %}</title>
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem("app_theme") || "dark";
+            document.documentElement.setAttribute("data-bs-theme", savedTheme);
+        })();
+    </script>
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,10 +23,6 @@
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
         :root {
-            --bg-main: #0f172a;
-            --bg-card: #1e293b;
-            --border-color: #334155;
-            --text-muted-color: #94a3b8;
             --neon-cyan: #00f2fe;
             --neon-blue: #4facfe;
             --neon-purple: #a18cd1;
@@ -28,20 +30,51 @@
             --neon-green: #43e97b;
         }
 
+        [data-bs-theme="dark"] {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --border-color: #334155;
+            --text-main: #f8fafc;
+            --text-muted-color: #94a3b8;
+            --heading-color: #ffffff;
+            --sidebar-bg: rgba(30, 41, 59, 0.85);
+            --stat-card-bg: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+            --input-bg: #0f172a;
+            --table-bg: #1e293b;
+            --table-color: #f8fafc;
+            --sankey-node-line: #ffffff;
+        }
+
+        [data-bs-theme="light"] {
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #1e293b;
+            --text-muted-color: #64748b;
+            --heading-color: #0f172a;
+            --sidebar-bg: rgba(255, 255, 255, 0.85);
+            --stat-card-bg: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%);
+            --input-bg: #ffffff;
+            --table-bg: #ffffff;
+            --table-color: #1e293b;
+            --sankey-node-line: #64748b;
+        }
+
         body {
             background-color: var(--bg-main);
-            color: #f8fafc;
+            color: var(--text-main);
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             display: flex;
             min-height: 100vh;
             margin: 0;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         /* Sidebar Styling */
         .sidebar {
             width: 260px;
             flex-shrink: 0;
-            background: rgba(30, 41, 59, 0.85);
+            background: var(--sidebar-bg);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border-right: 1px solid var(--border-color);
@@ -53,12 +86,13 @@
             top: 0;
             height: 100vh;
             z-index: 1000;
+            transition: background 0.3s ease, border-color 0.3s ease;
         }
 
         .sidebar-brand {
             font-weight: 800;
             font-size: 1.15rem;
-            color: #ffffff;
+            color: var(--heading-color);
             text-decoration: none;
             display: flex;
             align-items: center;
@@ -75,7 +109,7 @@
         }
 
         .sidebar .nav-link {
-            color: #94a3b8;
+            color: var(--text-muted-color);
             font-weight: 500;
             padding: 0.75rem 1rem;
             border-radius: 10px;
@@ -101,7 +135,7 @@
         }
 
         .sidebar .nav-link.active {
-            color: #ffffff;
+            color: var(--heading-color);
             background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(59, 130, 246, 0.2));
             border: 1px solid rgba(6, 182, 212, 0.4);
             font-weight: 600;
@@ -112,20 +146,21 @@
             color: #00f2fe;
         }
 
-        /* Language Toggle */
-        .lang-switch {
-            background: #0f172a;
+        /* Theme & Language Toggles */
+        .theme-switch, .lang-switch {
+            background: var(--bg-main);
             border: 1px solid var(--border-color);
             border-radius: 20px;
             padding: 4px;
             display: flex;
             gap: 4px;
+            transition: background 0.3s ease, border-color 0.3s ease;
         }
 
-        .lang-btn {
+        .theme-btn, .lang-btn {
             border: none;
             background: transparent;
-            color: #94a3b8;
+            color: var(--text-muted-color);
             font-size: 0.8rem;
             font-weight: 600;
             padding: 4px 12px;
@@ -133,9 +168,13 @@
             cursor: pointer;
             transition: all 0.2s ease;
             flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
         }
 
-        .lang-btn.active {
+        .theme-btn.active, .lang-btn.active {
             background: linear-gradient(135deg, #00f2fe, #4facfe);
             color: #0f172a;
         }
@@ -152,8 +191,8 @@
             background-color: var(--bg-card);
             border-radius: 14px;
             border: 1px solid var(--border-color);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.3s ease;
         }
 
         .card:hover {
@@ -162,7 +201,7 @@
         }
 
         .stat-card {
-            background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+            background: var(--stat-card-bg);
             border: 1px solid var(--border-color);
             position: relative;
             overflow: hidden;
@@ -184,32 +223,32 @@
         }
 
         h2, h3, h5, h6 {
-            color: #ffffff !important;
+            color: var(--heading-color) !important;
         }
 
         /* Table overrides */
         .table {
-            color: #e2e8f0;
+            color: var(--text-main);
             border-color: var(--border-color);
         }
 
         .table-dark {
-            --bs-table-bg: #1e293b;
+            --bs-table-bg: var(--table-bg);
             --bs-table-border-color: var(--border-color);
-            color: #f8fafc;
+            color: var(--table-color);
         }
 
         /* Form overrides */
         .form-control, .form-select {
-            background-color: #0f172a;
-            color: #f8fafc;
+            background-color: var(--input-bg);
+            color: var(--text-main);
             border: 1px solid var(--border-color);
             border-radius: 8px;
         }
 
         .form-control:focus, .form-select:focus {
-            background-color: #0f172a;
-            color: #ffffff;
+            background-color: var(--input-bg);
+            color: var(--text-main);
             border-color: #06b6d4;
             box-shadow: 0 0 0 0.25rem rgba(6, 182, 212, 0.25);
         }
@@ -222,6 +261,19 @@
         .badge.bg-success {
             background: linear-gradient(135deg, #10b981, #059669) !important;
             box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Dynamic text color overrides for Light mode */
+        [data-bs-theme="light"] .text-white,
+        [data-bs-theme="light"] .text-light {
+            color: var(--text-main) !important;
+        }
+
+        [data-bs-theme="light"] .accordion-dark .accordion-item,
+        [data-bs-theme="light"] .accordion-dark .accordion-button,
+        [data-bs-theme="light"] .accordion-dark .accordion-body {
+            background-color: var(--bg-card) !important;
+            color: var(--text-main) !important;
         }
     </style>
 </head>
@@ -251,7 +303,18 @@
         </div>
 
 
-        <div class="pt-3 border-top border-secondary border-opacity-25">
+        <div class="pt-3 border-top border-secondary border-opacity-25 d-flex flex-column gap-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <small class="text-muted fw-semibold">Theme / Tema</small>
+                <div class="theme-switch">
+                    <button type="button" class="theme-btn active" id="btn-theme-dark" onclick="setTheme('dark')" title="Dark Mode">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                    <button type="button" class="theme-btn" id="btn-theme-light" onclick="setTheme('light')" title="Light Mode">
+                        <i class="fa-solid fa-sun"></i>
+                    </button>
+                </div>
+            </div>
             <div class="d-flex align-items-center justify-content-between">
                 <small class="text-muted fw-semibold">Language / Idioma</small>
                 <div class="lang-switch">
@@ -363,6 +426,20 @@
             }
         };
 
+        function setTheme(theme) {
+            localStorage.setItem("app_theme", theme);
+            document.documentElement.setAttribute("data-bs-theme", theme);
+
+            const btnDark = document.getElementById("btn-theme-dark");
+            const btnLight = document.getElementById("btn-theme-light");
+            if (btnDark && btnLight) {
+                btnDark.classList.toggle("active", theme === "dark");
+                btnLight.classList.toggle("active", theme === "light");
+            }
+
+            window.dispatchEvent(new CustomEvent("themeChanged", { detail: { theme: theme } }));
+        }
+
         function setLanguage(lang) {
             localStorage.setItem("app_lang", lang);
             document.querySelectorAll("[data-i18n]").forEach(el => {
@@ -379,6 +456,9 @@
         document.addEventListener("DOMContentLoaded", function() {
             const savedLang = localStorage.getItem("app_lang") || "en";
             setLanguage(savedLang);
+
+            const savedTheme = localStorage.getItem("app_theme") || "dark";
+            setTheme(savedTheme);
         });
     </script>
 </body>

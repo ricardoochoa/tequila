@@ -161,6 +161,46 @@
     document.addEventListener("DOMContentLoaded", function() {
         const rawData = JSON.parse(document.getElementById("lca-results-data").textContent);
 
+        function getChartThemeColors(theme) {
+            const isDark = theme === "dark";
+            return {
+                gridColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                tickColor: isDark ? '#94a3b8' : '#64748b',
+                tooltipBg: isDark ? '#1e293b' : '#ffffff',
+                tooltipTitle: isDark ? '#ffffff' : '#0f172a',
+                tooltipBorder: isDark ? '#334155' : '#cbd5e1',
+                plotlyFontColor: isDark ? '#ffffff' : '#1e293b',
+                plotlyNodeLineColor: isDark ? '#ffffff' : '#64748b'
+            };
+        }
+
+        function applyChartTheme(chart, themeColors) {
+            if (!chart) return;
+            chart.options.scales.x.grid.color = themeColors.gridColor;
+            chart.options.scales.x.ticks.color = themeColors.tickColor;
+            chart.options.scales.y.grid.color = themeColors.gridColor;
+            chart.options.scales.y.ticks.color = themeColors.tickColor;
+            chart.options.plugins.tooltip.backgroundColor = themeColors.tooltipBg;
+            chart.options.plugins.tooltip.titleColor = themeColors.tooltipTitle;
+            chart.options.plugins.tooltip.borderColor = themeColors.tooltipBorder;
+            chart.update();
+        }
+
+        function applyPlotlyTheme(divId, themeColors) {
+            const div = document.getElementById(divId);
+            if (div && div.layout) {
+                Plotly.relayout(divId, {
+                    'font.color': themeColors.plotlyFontColor
+                });
+                if (div.data && div.data[0] && div.data[0].node && div.data[0].node.line) {
+                    Plotly.restyle(divId, { 'node.line.color': themeColors.plotlyNodeLineColor });
+                }
+            }
+        }
+
+        const initialTheme = localStorage.getItem("app_theme") || "dark";
+        const initialColors = getChartThemeColors(initialTheme);
+
         // Stateful UX-3 Feedback: Listen to input changes in Control Panel
         const formInputs = document.querySelectorAll("#scenario-form input, #scenario-form select");
         const recalcBadge = document.getElementById("recalc-badge");
@@ -185,7 +225,7 @@
         cyanGradient.addColorStop(0, '#00f2fe');
         cyanGradient.addColorStop(1, '#4facfe');
 
-        new Chart(ctxGwp, {
+        const hotspotChart = new Chart(ctxGwp, {
             type: 'bar',
             data: {
                 labels: stages,
@@ -204,21 +244,21 @@
                 plugins: { 
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: '#1e293b',
-                        titleColor: '#ffffff',
+                        backgroundColor: initialColors.tooltipBg,
+                        titleColor: initialColors.tooltipTitle,
                         bodyColor: '#00f2fe',
-                        borderColor: '#334155',
+                        borderColor: initialColors.tooltipBorder,
                         borderWidth: 1
                     }
                 },
                 scales: {
                     x: {
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        ticks: { color: '#94a3b8' }
+                        grid: { color: initialColors.gridColor },
+                        ticks: { color: initialColors.tickColor }
                     },
                     y: {
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        ticks: { color: '#94a3b8' }
+                        grid: { color: initialColors.gridColor },
+                        ticks: { color: initialColors.tickColor }
                     }
                 }
             }
@@ -233,7 +273,7 @@
         greenGradient.addColorStop(0, '#38f9d7');
         greenGradient.addColorStop(1, '#43e97b');
 
-        new Chart(ctxWater, {
+        const waterHotspotChart = new Chart(ctxWater, {
             type: 'bar',
             data: {
                 labels: waterStages,
@@ -252,21 +292,21 @@
                 plugins: { 
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: '#1e293b',
-                        titleColor: '#ffffff',
+                        backgroundColor: initialColors.tooltipBg,
+                        titleColor: initialColors.tooltipTitle,
                         bodyColor: '#38f9d7',
-                        borderColor: '#334155',
+                        borderColor: initialColors.tooltipBorder,
                         borderWidth: 1
                     }
                 },
                 scales: {
                     x: {
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        ticks: { color: '#94a3b8' }
+                        grid: { color: initialColors.gridColor },
+                        ticks: { color: initialColors.tickColor }
                     },
                     y: {
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        ticks: { color: '#94a3b8' }
+                        grid: { color: initialColors.gridColor },
+                        ticks: { color: initialColors.tickColor }
                     }
                 }
             }
@@ -289,7 +329,7 @@
             node: {
                 pad: 15,
                 thickness: 20,
-                line: { color: "#ffffff", width: 0.5 },
+                line: { color: initialColors.plotlyNodeLineColor, width: 0.5 },
                 label: labels,
                 color: colors
             },
@@ -304,7 +344,7 @@
             margin: { l: 50, r: 50, t: 20, b: 20 },
             paper_bgcolor: 'rgba(0,0,0,0)',
             plot_bgcolor: 'rgba(0,0,0,0)',
-            font: { color: '#ffffff', family: 'Inter, sans-serif', size: 11 }
+            font: { color: initialColors.plotlyFontColor, family: 'Inter, sans-serif', size: 11 }
         };
         const sankeyDiv = document.getElementById('sankeyDiagram');
         Plotly.newPlot(sankeyDiv, sankeyData, sankeyLayout, {responsive: true, displayModeBar: false});
@@ -321,7 +361,7 @@
             node: {
                 pad: 15,
                 thickness: 20,
-                line: { color: "#ffffff", width: 0.5 },
+                line: { color: initialColors.plotlyNodeLineColor, width: 0.5 },
                 label: wLabels,
                 color: wColors
             },
@@ -363,6 +403,15 @@
                     }
                 });
             }
+        });
+
+        // Listen for global theme changes
+        window.addEventListener("themeChanged", function(e) {
+            const colors = getChartThemeColors(e.detail.theme);
+            applyChartTheme(hotspotChart, colors);
+            applyChartTheme(waterHotspotChart, colors);
+            applyPlotlyTheme('sankeyDiagram', colors);
+            applyPlotlyTheme('waterSankeyDiagram', colors);
         });
     });
 </script>

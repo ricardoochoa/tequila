@@ -56,24 +56,41 @@
     document.addEventListener("DOMContentLoaded", function() {
         const benchData = JSON.parse(document.getElementById("benchmark-data").textContent);
 
-        const darkTooltipConfig = {
-            backgroundColor: '#1e293b',
-            titleColor: '#ffffff',
-            bodyColor: '#00f2fe',
-            borderColor: '#334155',
-            borderWidth: 1
-        };
+        function getChartThemeColors(theme) {
+            const isDark = theme === "dark";
+            return {
+                gridColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                tickColor: isDark ? '#94a3b8' : '#64748b',
+                legendColor: isDark ? '#f8fafc' : '#1e293b',
+                tooltipBg: isDark ? '#1e293b' : '#ffffff',
+                tooltipTitle: isDark ? '#ffffff' : '#0f172a',
+                tooltipBorder: isDark ? '#334155' : '#cbd5e1'
+            };
+        }
 
-        const waterTooltipConfig = {
-            backgroundColor: '#1e293b',
-            titleColor: '#ffffff',
-            bodyColor: '#38f9d7',
-            borderColor: '#334155',
-            borderWidth: 1
-        };
+        function updateBenchmarkChartTheme(chart, themeColors, hasLegend = false) {
+            if (!chart) return;
+            chart.options.scales.x.grid.color = themeColors.gridColor;
+            chart.options.scales.x.ticks.color = themeColors.tickColor;
+            chart.options.scales.y.grid.color = themeColors.gridColor;
+            chart.options.scales.y.ticks.color = themeColors.tickColor;
+            if (chart.options.scales.y.title) {
+                chart.options.scales.y.title.color = themeColors.tickColor;
+            }
+            chart.options.plugins.tooltip.backgroundColor = themeColors.tooltipBg;
+            chart.options.plugins.tooltip.titleColor = themeColors.tooltipTitle;
+            chart.options.plugins.tooltip.borderColor = themeColors.tooltipBorder;
+            if (hasLegend && chart.options.plugins.legend && chart.options.plugins.legend.labels) {
+                chart.options.plugins.legend.labels.color = themeColors.legendColor;
+            }
+            chart.update();
+        }
+
+        const initialTheme = localStorage.getItem("app_theme") || "dark";
+        const initialColors = getChartThemeColors(initialTheme);
 
         // GWP Benchmark Bar Chart with Cyan-Pink Neon Palette & Explicit Y Axis Title (UI-1)
-        new Chart(document.getElementById('gwpBenchmarkChart').getContext('2d'), {
+        const gwpBenchmarkChart = new Chart(document.getElementById('gwpBenchmarkChart').getContext('2d'), {
             type: 'bar',
             data: {
                 labels: benchData.labels,
@@ -90,24 +107,30 @@
                 responsive: true, 
                 plugins: { 
                     legend: { display: false },
-                    tooltip: darkTooltipConfig
+                    tooltip: {
+                        backgroundColor: initialColors.tooltipBg,
+                        titleColor: initialColors.tooltipTitle,
+                        bodyColor: '#00f2fe',
+                        borderColor: initialColors.tooltipBorder,
+                        borderWidth: 1
+                    }
                 },
                 scales: {
                     x: {
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        ticks: { color: '#94a3b8' }
+                        grid: { color: initialColors.gridColor },
+                        ticks: { color: initialColors.tickColor }
                     },
                     y: {
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        ticks: { color: '#94a3b8' },
-                        title: { display: true, text: 'kg CO2-eq per bottle', color: '#94a3b8', font: { family: 'Inter, sans-serif' } }
+                        grid: { color: initialColors.gridColor },
+                        ticks: { color: initialColors.tickColor },
+                        title: { display: true, text: 'kg CO2-eq per bottle', color: initialColors.tickColor, font: { family: 'Inter, sans-serif' } }
                     }
                 }
             }
         });
 
         // Water Benchmark Bar Chart with Green-Cyan Neon Palette & Explicit Y Axis Title (UI-1)
-        new Chart(document.getElementById('waterBenchmarkChart').getContext('2d'), {
+        const waterBenchmarkChart = new Chart(document.getElementById('waterBenchmarkChart').getContext('2d'), {
             type: 'bar',
             data: {
                 labels: benchData.labels,
@@ -124,24 +147,30 @@
                 responsive: true, 
                 plugins: { 
                     legend: { display: false },
-                    tooltip: waterTooltipConfig
+                    tooltip: {
+                        backgroundColor: initialColors.tooltipBg,
+                        titleColor: initialColors.tooltipTitle,
+                        bodyColor: '#38f9d7',
+                        borderColor: initialColors.tooltipBorder,
+                        borderWidth: 1
+                    }
                 },
                 scales: {
                     x: {
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        ticks: { color: '#94a3b8' }
+                        grid: { color: initialColors.gridColor },
+                        ticks: { color: initialColors.tickColor }
                     },
                     y: {
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        ticks: { color: '#94a3b8' },
-                        title: { display: true, text: 'm3 world-eq per bottle', color: '#94a3b8', font: { family: 'Inter, sans-serif' } }
+                        grid: { color: initialColors.gridColor },
+                        ticks: { color: initialColors.tickColor },
+                        title: { display: true, text: 'm3 world-eq per bottle', color: initialColors.tickColor, font: { family: 'Inter, sans-serif' } }
                     }
                 }
             }
         });
 
         // Carbon Sensitivity Line Chart
-        new Chart(document.getElementById('sensitivityChart').getContext('2d'), {
+        const sensitivityChart = new Chart(document.getElementById('sensitivityChart').getContext('2d'), {
             type: 'line',
             data: {
                 labels: ['0% Recycled', '25% Recycled', '50% Recycled', '75% Recycled', '100% Recycled'],
@@ -156,26 +185,32 @@
                 responsive: true,
                 plugins: {
                     legend: {
-                        labels: { color: '#f8fafc', font: { family: 'Inter, sans-serif' } }
+                        labels: { color: initialColors.legendColor, font: { family: 'Inter, sans-serif' } }
                     },
-                    tooltip: darkTooltipConfig
+                    tooltip: {
+                        backgroundColor: initialColors.tooltipBg,
+                        titleColor: initialColors.tooltipTitle,
+                        bodyColor: '#00f2fe',
+                        borderColor: initialColors.tooltipBorder,
+                        borderWidth: 1
+                    }
                 },
                 scales: {
                     x: {
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        ticks: { color: '#94a3b8' }
+                        grid: { color: initialColors.gridColor },
+                        ticks: { color: initialColors.tickColor }
                     },
                     y: {
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        ticks: { color: '#94a3b8' },
-                        title: { display: true, text: 'kg CO2-eq per bottle', color: '#94a3b8', font: { family: 'Inter, sans-serif' } }
+                        grid: { color: initialColors.gridColor },
+                        ticks: { color: initialColors.tickColor },
+                        title: { display: true, text: 'kg CO2-eq per bottle', color: initialColors.tickColor, font: { family: 'Inter, sans-serif' } }
                     }
                 }
             }
         });
 
         // Water Sensitivity Line Chart
-        new Chart(document.getElementById('waterSensitivityChart').getContext('2d'), {
+        const waterSensitivityChart = new Chart(document.getElementById('waterSensitivityChart').getContext('2d'), {
             type: 'line',
             data: {
                 labels: ['0% Recycled', '25% Recycled', '50% Recycled', '75% Recycled', '100% Recycled'],
@@ -190,22 +225,36 @@
                 responsive: true,
                 plugins: {
                     legend: {
-                        labels: { color: '#f8fafc', font: { family: 'Inter, sans-serif' } }
+                        labels: { color: initialColors.legendColor, font: { family: 'Inter, sans-serif' } }
                     },
-                    tooltip: waterTooltipConfig
+                    tooltip: {
+                        backgroundColor: initialColors.tooltipBg,
+                        titleColor: initialColors.tooltipTitle,
+                        bodyColor: '#38f9d7',
+                        borderColor: initialColors.tooltipBorder,
+                        borderWidth: 1
+                    }
                 },
                 scales: {
                     x: {
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        ticks: { color: '#94a3b8' }
+                        grid: { color: initialColors.gridColor },
+                        ticks: { color: initialColors.tickColor }
                     },
                     y: {
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        ticks: { color: '#94a3b8' },
-                        title: { display: true, text: 'm3 world-eq per bottle', color: '#94a3b8', font: { family: 'Inter, sans-serif' } }
+                        grid: { color: initialColors.gridColor },
+                        ticks: { color: initialColors.tickColor },
+                        title: { display: true, text: 'm3 world-eq per bottle', color: initialColors.tickColor, font: { family: 'Inter, sans-serif' } }
                     }
                 }
             }
+        });
+
+        window.addEventListener("themeChanged", function(e) {
+            const colors = getChartThemeColors(e.detail.theme);
+            updateBenchmarkChartTheme(gwpBenchmarkChart, colors);
+            updateBenchmarkChartTheme(waterBenchmarkChart, colors);
+            updateBenchmarkChartTheme(sensitivityChart, colors, true);
+            updateBenchmarkChartTheme(waterSensitivityChart, colors, true);
         });
     });
 </script>
