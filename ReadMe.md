@@ -62,7 +62,11 @@ Sigue estos pasos para instalar y ejecutar el proyecto en tu entorno local.
 6. **Configuración del motor EXIOBASE 3 (Solo primera vez)**:  
    * Crea una subcarpeta llamada exiobase3 dentro del directorio scratch/ en la raíz de este proyecto.  
    * Extrae ahí todos los archivos del ZIP de EXIOBASE 3 (esta carpeta es ignorada por Git de forma segura).  
-   * Abre el entorno interactivo (como el notebook Tequila\_LCA.ipynb) y utiliza las herramientas de bw2io apuntando a scratch/exiobase3/ para importar la base de datos a Brightway2. Asegúrate de registrarla con el nombre exacto "EXIOBASE\_3".  
+   * Ejecuta el script automático de importación:  
+     python import\_exiobase.py
+
+*(Nota: Este proceso automatizado puede tardar entre 5 y 15 minutos en completarse y consumirá bastante memoria RAM. El script te avisará cuando haya terminado con éxito).*
+
 7. **(Opcional) Ejecutar las pruebas unitarias**:  
    Verifica que la aplicación y los motores de cálculo funcionen correctamente:  
    python manage.py test
