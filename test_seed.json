@@ -1,0 +1,1622 @@
+[
+{
+    "model": "lca_engine.producer",
+    "pk": 1,
+    "fields": {
+        "name": "Destilería Los Altos",
+        "location": "Jalisco, Mexico",
+        "created_at": "2026-07-30T04:39:27.961Z"
+    }
+},
+{
+    "model": "lca_engine.product",
+    "pk": 1,
+    "fields": {
+        "producer": 1,
+        "name": "100% Reposado Tequila",
+        "tequila_class": "reposado",
+        "bottle_weight_g": 550.0,
+        "aging_months": 6,
+        "created_at": "2026-07-30T04:39:27.965Z"
+    }
+},
+{
+    "model": "lca_engine.inventoryscenario",
+    "pk": 1,
+    "fields": {
+        "product": null,
+        "name": "100% Reposado Tequila Bottle (700ml)",
+        "description": "Default cradle-to-gate inventory process.",
+        "version": 1,
+        "is_baseline": true,
+        "captured_payload": {},
+        "created_at": "2026-07-30T03:18:46.183Z",
+        "updated_at": "2026-07-30T03:18:46.183Z"
+    }
+},
+{
+    "model": "lca_engine.inventoryscenario",
+    "pk": 2,
+    "fields": {
+        "product": 1,
+        "name": "100% Reposado Tequila (Baseline)",
+        "description": "Standard cradle-to-gate inventory process.",
+        "version": 1,
+        "is_baseline": true,
+        "captured_payload": {
+            "total_tequila_produced": {
+                "amount": 1000000.0,
+                "tier1_factor": null,
+                "notes": "Base de cálculo solicitada (1 millón de L al 40% Alc. Vol.)."
+            },
+            "cultivated_area": {
+                "amount": 77.78,
+                "tier1_factor": null,
+                "notes": "Calculado asumiendo rendimiento de 90 t/ha de Agave tequilana (Guías INIFAP)."
+            },
+            "agave_harvested_ton": {
+                "amount": 7000.0,
+                "tier1_factor": 0.28,
+                "notes": "Calculado asumiendo 7.0 kg/L (media del rango de 6-8 kg)."
+            },
+            "luc_deforestation_ha": {
+                "amount": 0.0,
+                "tier1_factor": null,
+                "notes": "Asumido 0.0 por falta de datos geográficos para línea base."
+            },
+            "fertilizer_n_kg": {
+                "amount": 7778.0,
+                "tier1_factor": null,
+                "notes": "Calculado a 100 kg N/ha anual (Promedios INIFAP)."
+            },
+            "fertilizer_p_kg": {
+                "amount": 3111.2,
+                "tier1_factor": null,
+                "notes": "Calculado a 40 kg P/ha anual (Promedios INIFAP)."
+            },
+            "fertilizer_k_kg": {
+                "amount": 6222.4,
+                "tier1_factor": null,
+                "notes": "Calculado a 80 kg K/ha anual (Promedios INIFAP)."
+            },
+            "organic_fertilizer_kg": {
+                "amount": 0.0,
+                "tier1_factor": null,
+                "notes": "No especificado en fuentes primarias; asumido 0.0."
+            },
+            "pesticides_active_kg": {
+                "amount": 388.9,
+                "tier1_factor": null,
+                "notes": "Calculado a 5 kg de ingrediente activo por ha, promedio de la industria."
+            },
+            "agri_diesel_liters": {
+                "amount": 7778.0,
+                "tier1_factor": 2.68,
+                "notes": "Calculado asumiendo uso de 100 L/ha para preparación y jima."
+            },
+            "agave_milled_ton": {
+                "amount": 7000.0,
+                "tier1_factor": null,
+                "notes": "Calculado asumiendo la media exacta de 7.0 kg/L."
+            },
+            "agave_transport_km": {
+                "amount": 40.0,
+                "tier1_factor": null,
+                "notes": "Distancia promedio asumida entre campo y destilería."
+            },
+            "fuel_oil_liters": {
+                "amount": 1344400.0,
+                "tier1_factor": 3.1,
+                "notes": "Calculado asumiendo 1.34 L/L escalado de Morales et al. 2025[cite: 1]."
+            },
+            "natural_gas_m3": {
+                "amount": 0.0,
+                "tier1_factor": null,
+                "notes": "Asumido 0.0, el estudio de referencia utiliza combustóleo en calderas[cite: 1]."
+            },
+            "lp_gas_liters": {
+                "amount": 0.0,
+                "tier1_factor": null,
+                "notes": "Asumido 0.0 al concentrar la matriz térmica en fuel oil."
+            },
+            "grid_electricity_kwh": {
+                "amount": 1720000.0,
+                "tier1_factor": 0.45,
+                "notes": "Calculado asumiendo 1.72 kWh/L (sumatoria de etapas)[cite: 1]."
+            },
+            "solar_electricity_kwh": {
+                "amount": 0.0,
+                "tier1_factor": null,
+                "notes": "No reportado en la literatura base; asumido 0.0."
+            },
+            "yeast_nutrients_kg": {
+                "amount": 1000.0,
+                "tier1_factor": null,
+                "notes": "Calculado asumiendo 1 g/L de jugo de agave (Morales et al. 2025)[cite: 1]."
+            },
+            "ref_r22_leaked_kg": {
+                "amount": 0.0,
+                "tier1_factor": null,
+                "notes": "Fugas de refrigerante no especificadas en la literatura base."
+            },
+            "ref_r134a_leaked_kg": {
+                "amount": 0.0,
+                "tier1_factor": null,
+                "notes": "Fugas de refrigerante no especificadas en la literatura base."
+            },
+            "glass_bottles_kg": {
+                "amount": 785714.3,
+                "tier1_factor": 1.1,
+                "notes": "Calculado asumiendo botella de 550g (Tequila Reposado)[cite: 1]."
+            },
+            "cardboard_boxes_kg": {
+                "amount": 171428.6,
+                "tier1_factor": null,
+                "notes": "Calculado asumiendo 120 g de cartón por botella de 700 ml."
+            },
+            "groundwater_m3": {
+                "amount": 15000.0,
+                "tier1_factor": 0.65,
+                "notes": "Calculado asumiendo 15 L de agua (procesos y enfriamiento) por L de tequila."
+            },
+            "municipal_water_m3": {
+                "amount": 0.0,
+                "tier1_factor": null,
+                "notes": "Asumido 0.0 (dependencia típica de pozo profundo)."
+            },
+            "precipitation_mm": {
+                "amount": 850.0,
+                "tier1_factor": null,
+                "notes": "Dato climático promedio histórico para la zona agavera de Jalisco."
+            },
+            "evapotranspiration_mm": {
+                "amount": 450.0,
+                "tier1_factor": null,
+                "notes": "Dato agronómico paramétrico promedio para Agave tequilana Weber."
+            },
+            "vinasse_volume_m3": {
+                "amount": 11000.0,
+                "tier1_factor": null,
+                "notes": "Calculado asumiendo la media del rango proporcionado (11 L/L)."
+            },
+            "vinasse_cod_mg_l": {
+                "amount": 50000.0,
+                "tier1_factor": null,
+                "notes": "Carga orgánica (DQO) promedio estándar."
+            },
+            "vinasse_treatment": {
+                "amount": "pit",
+                "tier1_factor": null,
+                "notes": "Dato codificado: Valor 1.0 representa tratamiento biológico aeróbico/anaeróbico."
+            },
+            "bagasse_generated_ton": {
+                "amount": 2800.0,
+                "tier1_factor": null,
+                "notes": "Calculado al 40% del peso total del agave molido reportado."
+            },
+            "bagasse_boiler_pct": {
+                "amount": 60.0,
+                "tier1_factor": null,
+                "notes": "Porcentaje promedio de bagazo quemado para recuperación térmica."
+            },
+            "bagasse_compost_pct": {
+                "amount": 40.0,
+                "tier1_factor": null,
+                "notes": "Porcentaje promedio de bagazo destinado a compostaje."
+            },
+            "bagasse_landfill_pct": {
+                "amount": 0.0,
+                "tier1_factor": null,
+                "notes": "Se asume 0.0% a vertedero para el baseline sostenible."
+            },
+            "solid_waste_landfill_t": {
+                "amount": 50.0,
+                "tier1_factor": null,
+                "notes": "Estimación paramétrica de residuos no valorizables (etiquetas/tapas/otros)."
+            },
+            "solid_waste_recycled_t": {
+                "amount": 10.0,
+                "tier1_factor": null,
+                "notes": "Estimación paramétrica de residuos enviados a reciclaje."
+            },
+            "reporting_year": {
+                "amount": 2026.0,
+                "tier1_factor": null,
+                "notes": "Año en curso de la simulación."
+            }
+        },
+        "created_at": "2026-07-30T04:39:27.967Z",
+        "updated_at": "2026-08-03T23:19:18.270Z"
+    }
+},
+{
+    "model": "lca_engine.fallbackemissionfactor",
+    "pk": 1,
+    "fields": {
+        "django_field": "luc_deforestation_ha",
+        "reporting_year": 2019,
+        "emission_factor": 165000.0,
+        "unit": "kg CO2e / ha",
+        "indicator": "GWP100",
+        "source_reference": "IPCC 2019 Refinement, Vol 4, Ch 5",
+        "notes": "Estimación de pérdida de biomasa aérea y carbono en suelo para conversión de bosque seco tropical/matorral en México a cultivo agrícola perenne (aprox. 165 tCO2e/ha)."
+    }
+},
+{
+    "model": "lca_engine.fallbackemissionfactor",
+    "pk": 2,
+    "fields": {
+        "django_field": "fertilizer_n_kg",
+        "reporting_year": 2021,
+        "emission_factor": 8.13,
+        "unit": "kg CO2e / kg N",
+        "indicator": "GWP100",
+        "source_reference": "Ecoinvent 3.8 + IPCC 2019",
+        "notes": "Incluye carga de producción cuna-a-puerta (~3.45 Ecoinvent) y emisiones directas N2O en campo (~4.68 calculado vía IPCC: 1% volatilización a N2O, GWP=298)."
+    }
+},
+{
+    "model": "lca_engine.fallbackemissionfactor",
+    "pk": 3,
+    "fields": {
+        "django_field": "fertilizer_p_kg",
+        "reporting_year": 2021,
+        "emission_factor": 1.15,
+        "unit": "kg CO2e / kg P2O5",
+        "indicator": "GWP100",
+        "source_reference": "Ecoinvent 3.8: market for phosphate fertiliser, as P2O5 (GLO)",
+        "notes": "Solo incluye carga de producción y suministro (cuna a puerta)."
+    }
+},
+{
+    "model": "lca_engine.fallbackemissionfactor",
+    "pk": 4,
+    "fields": {
+        "django_field": "fertilizer_k_kg",
+        "reporting_year": 2021,
+        "emission_factor": 0.55,
+        "unit": "kg CO2e / kg K2O",
+        "indicator": "GWP100",
+        "source_reference": "Ecoinvent 3.8: market for potassium fertiliser, as K2O (GLO)",
+        "notes": "Solo incluye carga de producción y suministro (cuna a puerta)."
+    }
+},
+{
+    "model": "lca_engine.fallbackemissionfactor",
+    "pk": 5,
+    "fields": {
+        "django_field": "pesticides_active_kg",
+        "reporting_year": 2021,
+        "emission_factor": 10.5,
+        "unit": "kg CO2e / kg AI",
+        "indicator": "GWP100",
+        "source_reference": "Ecoinvent 3.8: market for pesticide, unspecified (GLO)",
+        "notes": "Promedio genérico mundial de impacto cuna a puerta para ingredientes activos no especificados."
+    }
+},
+{
+    "model": "lca_engine.fallbackemissionfactor",
+    "pk": 6,
+    "fields": {
+        "django_field": "ref_r22_leaked_kg",
+        "reporting_year": 2007,
+        "emission_factor": 1810.0,
+        "unit": "kg CO2e / kg",
+        "indicator": "GWP100",
+        "source_reference": "IPCC AR4, WGI, Chapter 2 (Table 2.14)",
+        "notes": "Valor de GWP-100 para R-22 (estándar corporativo de GHG Protocol)."
+    }
+},
+{
+    "model": "lca_engine.fallbackemissionfactor",
+    "pk": 7,
+    "fields": {
+        "django_field": "ref_r134a_leaked_kg",
+        "reporting_year": 2007,
+        "emission_factor": 1430.0,
+        "unit": "kg CO2e / kg",
+        "indicator": "GWP100",
+        "source_reference": "IPCC AR4, WGI, Chapter 2 (Table 2.14)",
+        "notes": "Valor de GWP-100 exacto para R-134a (alineado con la referencia esperada del protocolo)."
+    }
+},
+{
+    "model": "lca_engine.fallbackemissionfactor",
+    "pk": 8,
+    "fields": {
+        "django_field": "evapotranspiration_mm",
+        "reporting_year": 2018,
+        "emission_factor": 421.0,
+        "unit": "m3 eq / ha",
+        "indicator": "AWARE",
+        "source_reference": "WULCA AWARE (Boulay et al., 2018)",
+        "notes": "Factor de caracterización promedio país (México) para uso agrícola es 42.1 m3 eq/m3. 1 mm de ET por hectárea equivale a 10 m3 de agua (42.1 * 10 = 421)."
+    }
+},
+{
+    "model": "lca_engine.fallbackemissionfactor",
+    "pk": 9,
+    "fields": {
+        "django_field": "vinasse_cod_mg_l",
+        "reporting_year": 2019,
+        "emission_factor": 5e-06,
+        "unit": "kg CO2e / L",
+        "indicator": "GWP100",
+        "source_reference": "IPCC 2019, Vol 5, Ch 6 (Wastewater Treatment)",
+        "notes": "MCF=0.8 (fosa profunda), B0=0.25 kg CH4/kg DQO, GWP(CH4)=25. Genera 5 kg CO2e por kg de DQO. Para 1 mg/L, el factor por litro es 5 * 10^-6."
+    }
+},
+{
+    "model": "lca_engine.fallbackemissionfactor",
+    "pk": 10,
+    "fields": {
+        "django_field": "solid_waste_recycled_t",
+        "reporting_year": 2020,
+        "emission_factor": -3.098,
+        "unit": "kg CO2e / kg",
+        "indicator": "GWP100",
+        "source_reference": "EPA WARM v15 (Mixed Recyclables)",
+        "notes": "Crédito de -2.81 Toneladas Cortas CO2e/tonelada corta convertido a toneladas métricas. Refleja emisiones evitadas por el procesamiento de reciclables mixtos."
+    }
+},
+{
+    "model": "lca_engine.fallbackemissionfactor",
+    "pk": 11,
+    "fields": {
+        "django_field": "yeast_nutrients_kg",
+        "reporting_year": 2021,
+        "emission_factor": 1.2,
+        "unit": "kg CO2e / kg",
+        "indicator": "GWP100",
+        "source_reference": "Ecoinvent 3.8: market for yeast",
+        "notes": "Carga de producción cuna a puerta de levadura comercial."
+    }
+},
+{
+    "model": "lca_engine.fallbackemissionfactor",
+    "pk": 12,
+    "fields": {
+        "django_field": "municipal_water_m3",
+        "reporting_year": 2021,
+        "emission_factor": 0.001,
+        "unit": "kg CO2e / L",
+        "indicator": "GWP100",
+        "source_reference": "Ecoinvent 3.8: tap water supply",
+        "notes": "Tratamiento y distribución de agua potable de red municipal."
+    }
+},
+{
+    "model": "lca_engine.fallbackemissionfactor",
+    "pk": 13,
+    "fields": {
+        "django_field": "bagasse_boiler_pct",
+        "reporting_year": 2021,
+        "emission_factor": -0.22,
+        "unit": "kg CO2e / kg",
+        "indicator": "GWP100",
+        "source_reference": "IPCC 2019 / Bio-energy Credit",
+        "notes": "Sustitución de energía en calderas de biomasa."
+    }
+},
+{
+    "model": "lca_engine.fallbackemissionfactor",
+    "pk": 14,
+    "fields": {
+        "django_field": "municipal_water_m3",
+        "reporting_year": 2026,
+        "emission_factor": 0.0428,
+        "unit": "m3 eq / L",
+        "indicator": "AWARE",
+        "source_reference": "Boulay et al. (2018)",
+        "notes": "Country average non-agri AWARE factor for MX (42.8 m3/m3) scaled by 1/1000 for Django LCI conversion."
+    }
+},
+{
+    "model": "lca_engine.fallbackemissionfactor",
+    "pk": 15,
+    "fields": {
+        "django_field": "groundwater_m3",
+        "reporting_year": 2026,
+        "emission_factor": 88.0,
+        "unit": "m3 eq / m3",
+        "indicator": "AWARE",
+        "source_reference": "Boulay et al. (2018)",
+        "notes": "Country average unspecified AWARE factor for MX (88.0 m3/m3) for raw m3 Django LCI conversion."
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 1,
+    "fields": {
+        "scenario": 1,
+        "stage_name": "Reposado Tequila Bottle Output",
+        "category": "Production",
+        "query": "",
+        "amount": 1.0,
+        "unit": "unit",
+        "location": "MX",
+        "exchange_type": "production",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 2,
+    "fields": {
+        "scenario": 1,
+        "stage_name": "Agave pineapple",
+        "category": "Agave Reception",
+        "query": "Cultivation of crops",
+        "amount": 8.62,
+        "unit": "kg",
+        "location": "MX",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 3,
+    "fields": {
+        "scenario": 1,
+        "stage_name": "Electricity (Reception)",
+        "category": "Agave Reception",
+        "query": "Production of electricity",
+        "amount": 0.00329,
+        "unit": "kWh",
+        "location": "MX",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 4,
+    "fields": {
+        "scenario": 1,
+        "stage_name": "Fuel Oil (Cooking)",
+        "category": "Cooking",
+        "query": "Production of fuel oil",
+        "amount": 0.806,
+        "unit": "kg",
+        "location": "",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 5,
+    "fields": {
+        "scenario": 1,
+        "stage_name": "Water (Cooking)",
+        "category": "Cooking",
+        "query": "Collection, purification and distribution of water",
+        "amount": 0.716,
+        "unit": "L",
+        "location": "",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 6,
+    "fields": {
+        "scenario": 1,
+        "stage_name": "Electricity (Cooking)",
+        "category": "Cooking",
+        "query": "Production of electricity",
+        "amount": 0.000119,
+        "unit": "kWh",
+        "location": "MX",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 7,
+    "fields": {
+        "scenario": 1,
+        "stage_name": "Electricity (Grinding)",
+        "category": "Grinding",
+        "query": "Production of electricity",
+        "amount": 0.101,
+        "unit": "kWh",
+        "location": "MX",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 8,
+    "fields": {
+        "scenario": 1,
+        "stage_name": "Electricity (Fermentation)",
+        "category": "Fermentation",
+        "query": "Production of electricity",
+        "amount": 0.0936,
+        "unit": "kWh",
+        "location": "MX",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 9,
+    "fields": {
+        "scenario": 1,
+        "stage_name": "Yeast",
+        "category": "Fermentation",
+        "query": "Manufacture of food products",
+        "amount": 0.00444,
+        "unit": "kg",
+        "location": "",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 10,
+    "fields": {
+        "scenario": 1,
+        "stage_name": "CO2 Direct Emissions",
+        "category": "Fermentation",
+        "query": "Carbon dioxide, fossil",
+        "amount": 0.0317,
+        "unit": "kg",
+        "location": "",
+        "exchange_type": "biosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 11,
+    "fields": {
+        "scenario": 1,
+        "stage_name": "Fuel Oil (Distillation)",
+        "category": "Distillation",
+        "query": "Production of fuel oil",
+        "amount": 0.135,
+        "unit": "kg",
+        "location": "",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 12,
+    "fields": {
+        "scenario": 1,
+        "stage_name": "Electricity (Distillation)",
+        "category": "Distillation",
+        "query": "Production of electricity",
+        "amount": 1.004,
+        "unit": "kWh",
+        "location": "MX",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 13,
+    "fields": {
+        "scenario": 1,
+        "stage_name": "Glass Bottle (550g)",
+        "category": "Packaging",
+        "query": "Manufacture of glass",
+        "amount": 0.55,
+        "unit": "kg",
+        "location": "",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 14,
+    "fields": {
+        "scenario": 1,
+        "stage_name": "Aluminum Cap",
+        "category": "Packaging",
+        "query": "Manufacture of aluminum",
+        "amount": 0.098,
+        "unit": "kg",
+        "location": "",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 15,
+    "fields": {
+        "scenario": 1,
+        "stage_name": "Wooden Box",
+        "category": "Packaging",
+        "query": "Manufacture of wood products",
+        "amount": 0.245,
+        "unit": "kg",
+        "location": "",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 16,
+    "fields": {
+        "scenario": 2,
+        "stage_name": "Reposado Tequila Output",
+        "category": "Production",
+        "query": "",
+        "amount": 1.0,
+        "unit": "unit",
+        "location": "MX",
+        "exchange_type": "production",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 17,
+    "fields": {
+        "scenario": 2,
+        "stage_name": "Agave pineapple",
+        "category": "Agave Reception",
+        "query": "Cultivation of crops",
+        "amount": 8.62,
+        "unit": "kg",
+        "location": "MX",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 18,
+    "fields": {
+        "scenario": 2,
+        "stage_name": "Electricity (Reception)",
+        "category": "Agave Reception",
+        "query": "Production of electricity",
+        "amount": 0.00329,
+        "unit": "kWh",
+        "location": "MX",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 19,
+    "fields": {
+        "scenario": 2,
+        "stage_name": "Fuel Oil (Cooking)",
+        "category": "Cooking",
+        "query": "Production of fuel oil",
+        "amount": 0.806,
+        "unit": "kg",
+        "location": "",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 20,
+    "fields": {
+        "scenario": 2,
+        "stage_name": "Water (Cooking)",
+        "category": "Cooking",
+        "query": "Collection, purification and distribution of water",
+        "amount": 0.716,
+        "unit": "L",
+        "location": "",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 21,
+    "fields": {
+        "scenario": 2,
+        "stage_name": "Electricity (Grinding)",
+        "category": "Grinding",
+        "query": "Production of electricity",
+        "amount": 0.101,
+        "unit": "kWh",
+        "location": "MX",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 22,
+    "fields": {
+        "scenario": 2,
+        "stage_name": "Electricity (Fermentation)",
+        "category": "Fermentation",
+        "query": "Production of electricity",
+        "amount": 0.0936,
+        "unit": "kWh",
+        "location": "MX",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 23,
+    "fields": {
+        "scenario": 2,
+        "stage_name": "Yeast",
+        "category": "Fermentation",
+        "query": "Manufacture of food products",
+        "amount": 0.00444,
+        "unit": "kg",
+        "location": "",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 24,
+    "fields": {
+        "scenario": 2,
+        "stage_name": "CO2 Direct Emissions",
+        "category": "Fermentation",
+        "query": "Carbon dioxide, fossil",
+        "amount": 0.0317,
+        "unit": "kg",
+        "location": "",
+        "exchange_type": "biosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 25,
+    "fields": {
+        "scenario": 2,
+        "stage_name": "Fuel Oil (Distillation)",
+        "category": "Distillation",
+        "query": "Production of fuel oil",
+        "amount": 0.135,
+        "unit": "kg",
+        "location": "",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 26,
+    "fields": {
+        "scenario": 2,
+        "stage_name": "Electricity (Distillation)",
+        "category": "Distillation",
+        "query": "Production of electricity",
+        "amount": 1.004,
+        "unit": "kWh",
+        "location": "MX",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 27,
+    "fields": {
+        "scenario": 2,
+        "stage_name": "Glass Bottle (550g)",
+        "category": "Packaging",
+        "query": "Manufacture of glass",
+        "amount": 0.55,
+        "unit": "kg",
+        "location": "",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 28,
+    "fields": {
+        "scenario": 2,
+        "stage_name": "Aluminum Cap",
+        "category": "Packaging",
+        "query": "Manufacture of aluminum",
+        "amount": 0.098,
+        "unit": "kg",
+        "location": "",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 29,
+    "fields": {
+        "scenario": 2,
+        "stage_name": "Wooden Box",
+        "category": "Packaging",
+        "query": "Manufacture of wood products",
+        "amount": 0.245,
+        "unit": "kg",
+        "location": "",
+        "exchange_type": "technosphere",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.inventoryexchange",
+    "pk": 30,
+    "fields": {
+        "scenario": 2,
+        "stage_name": "Bagasse Bio-energy Credit",
+        "category": "Byproduct Credit",
+        "query": "bagasse",
+        "amount": 1.42,
+        "unit": "kg",
+        "location": "MX",
+        "exchange_type": "byproduct",
+        "supplier_gwp_factor": null,
+        "supplier_water_factor": null
+    }
+},
+{
+    "model": "lca_engine.lcaresult",
+    "pk": 1,
+    "fields": {
+        "scenario": 2,
+        "gwp_total": 3.2563,
+        "water_footprint_aware": 104.0719,
+        "biogenic_co2": 0.1553,
+        "raw_json_results": {
+            "project": "Tequila_LCA_Mexico",
+            "bound_exchanges": 0,
+            "gwp_score": 3.2563,
+            "water_footprint_aware": 104.0719,
+            "biogenic_co2": 0.1553,
+            "hotspots": [
+                {
+                    "stage": "Consumo de Combustóleo",
+                    "gwp_score": 2.8882,
+                    "data_tier": "Tier 1 (Supplier)",
+                    "pct": 81.66
+                },
+                {
+                    "stage": "Botellas de Vidrio",
+                    "gwp_score": 0.576,
+                    "data_tier": "Tier 1 (Supplier)",
+                    "pct": 16.29
+                },
+                {
+                    "stage": "Fertilizante (Nitrógeno)",
+                    "gwp_score": 0.0443,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 1.25
+                },
+                {
+                    "stage": "Diésel Agrícola",
+                    "gwp_score": 0.0123,
+                    "data_tier": "Tier 1 (Supplier)",
+                    "pct": 0.35
+                },
+                {
+                    "stage": "Extracción de Agua Subterránea",
+                    "gwp_score": 0.0068,
+                    "data_tier": "Tier 1 (Supplier)",
+                    "pct": 0.19
+                },
+                {
+                    "stage": "Pesticidas (Ingrediente Activo)",
+                    "gwp_score": 0.0029,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 0.08
+                },
+                {
+                    "stage": "Fertilizante (Fósforo)",
+                    "gwp_score": 0.0025,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 0.07
+                },
+                {
+                    "stage": "Fertilizante (Potasio)",
+                    "gwp_score": 0.0024,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 0.07
+                },
+                {
+                    "stage": "Levaduras y Nutrientes",
+                    "gwp_score": 0.0008,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 0.02
+                },
+                {
+                    "stage": "Electricidad de la Red",
+                    "gwp_score": 0.0005,
+                    "data_tier": "Tier 1 (Supplier)",
+                    "pct": 0.01
+                },
+                {
+                    "stage": "Área Cultivada",
+                    "gwp_score": 0.0,
+                    "data_tier": "Intermediate Parameter",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Agave Cosechado",
+                    "gwp_score": 0.0,
+                    "data_tier": "Intermediate Parameter",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Producción Total de Tequila",
+                    "gwp_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Agave Procesado en Molienda",
+                    "gwp_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Distancia de Transporte de Agave",
+                    "gwp_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Cajas de Cartón",
+                    "gwp_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Precipitación Pluvial",
+                    "gwp_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Evapotranspiración del Cultivo",
+                    "gwp_score": 0.0,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Volumen de Vinazas",
+                    "gwp_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "DQO de Vinazas",
+                    "gwp_score": 0.0,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Bagazo Generado",
+                    "gwp_score": 0.0,
+                    "data_tier": "Intermediate Parameter",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Bagazo a Compostaje",
+                    "gwp_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Residuos Sólidos a Relleno",
+                    "gwp_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Residuos Sólidos a Reciclaje",
+                    "gwp_score": -0.0217,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Bagazo a Combustión",
+                    "gwp_score": -0.2587,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 0.0
+                }
+            ],
+            "water_hotspots": [
+                {
+                    "stage": "Evapotranspiración del Cultivo",
+                    "water_score": 103.1479,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 99.11
+                },
+                {
+                    "stage": "Extracción de Agua Subterránea",
+                    "water_score": 0.924,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 0.89
+                },
+                {
+                    "stage": "Área Cultivada",
+                    "water_score": 0.0,
+                    "data_tier": "Intermediate Parameter",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Agave Cosechado",
+                    "water_score": 0.0,
+                    "data_tier": "Intermediate Parameter",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Fertilizante (Nitrógeno)",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Fertilizante (Fósforo)",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Fertilizante (Potasio)",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Pesticidas (Ingrediente Activo)",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Diésel Agrícola",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Producción Total de Tequila",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Agave Procesado en Molienda",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Distancia de Transporte de Agave",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Consumo de Combustóleo",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Electricidad de la Red",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Levaduras y Nutrientes",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Botellas de Vidrio",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Cajas de Cartón",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Precipitación Pluvial",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Volumen de Vinazas",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "DQO de Vinazas",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Bagazo Generado",
+                    "water_score": 0.0,
+                    "data_tier": "Intermediate Parameter",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Bagazo a Combustión",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Bagazo a Compostaje",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Residuos Sólidos a Relleno",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 2 (Default)",
+                    "pct": 0.0
+                },
+                {
+                    "stage": "Residuos Sólidos a Reciclaje",
+                    "water_score": 0.0,
+                    "data_tier": "Tier 3 (Fallback)",
+                    "pct": 0.0
+                }
+            ],
+            "has_exiobase": false,
+            "enable_exiobase": false,
+            "db_mode": "EXIOBASE Disabled (Tier 3 Relational DB Active)",
+            "functional_unit_ml": 700.0,
+            "glass_recycling_rate_pct": 12.0,
+            "gwp_tier1": 3.4838,
+            "gwp_tier2": 0.0,
+            "gwp_tier3": 0.0529,
+            "primary_share_pct": 98.5,
+            "sankey_data": {
+                "labels": [
+                    "700ml Reposado Tequila Bottle",
+                    "Área Cultivada",
+                    "AgriculturalPhase",
+                    "Agave Cosechado",
+                    "Fertilizante (Nitrógeno)",
+                    "Fertilizante (Fósforo)",
+                    "Fertilizante (Potasio)",
+                    "Pesticidas (Ingrediente Activo)",
+                    "Diésel Agrícola",
+                    "Producción Total de Tequila",
+                    "IndustrialPhase",
+                    "Agave Procesado en Molienda",
+                    "Distancia de Transporte de Agave",
+                    "Consumo de Combustóleo",
+                    "Electricidad de la Red",
+                    "Levaduras y Nutrientes",
+                    "Botellas de Vidrio",
+                    "Cajas de Cartón",
+                    "Extracción de Agua Subterránea",
+                    "WaterResource",
+                    "Precipitación Pluvial",
+                    "Evapotranspiración del Cultivo",
+                    "Volumen de Vinazas",
+                    "WasteManagement",
+                    "DQO de Vinazas",
+                    "Bagazo Generado",
+                    "Bagazo a Combustión",
+                    "Bagazo a Compostaje",
+                    "Residuos Sólidos a Relleno",
+                    "Residuos Sólidos a Reciclaje"
+                ],
+                "colors": [
+                    "#38f9d7",
+                    "#4facfe",
+                    "#a18cd1",
+                    "#fbc2eb",
+                    "#43e97b",
+                    "#38f9d7",
+                    "#f59e0b",
+                    "#ff0844",
+                    "#30cfd0",
+                    "#00f2fe",
+                    "#4facfe",
+                    "#a18cd1",
+                    "#fbc2eb",
+                    "#43e97b",
+                    "#38f9d7",
+                    "#f59e0b",
+                    "#ff0844",
+                    "#30cfd0",
+                    "#00f2fe",
+                    "#4facfe",
+                    "#a18cd1",
+                    "#fbc2eb",
+                    "#43e97b",
+                    "#38f9d7",
+                    "#f59e0b",
+                    "#ff0844",
+                    "#30cfd0",
+                    "#00f2fe",
+                    "#4facfe",
+                    "#a18cd1"
+                ],
+                "links": {
+                    "source": [
+                        1,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7,
+                        8,
+                        9,
+                        11,
+                        12,
+                        13,
+                        14,
+                        15,
+                        16,
+                        17,
+                        18,
+                        20,
+                        21,
+                        22,
+                        24,
+                        25,
+                        26,
+                        27,
+                        28,
+                        29,
+                        2,
+                        10,
+                        19,
+                        23
+                    ],
+                    "target": [
+                        2,
+                        2,
+                        2,
+                        2,
+                        2,
+                        2,
+                        2,
+                        10,
+                        10,
+                        10,
+                        10,
+                        10,
+                        10,
+                        10,
+                        10,
+                        19,
+                        19,
+                        19,
+                        23,
+                        23,
+                        23,
+                        23,
+                        23,
+                        23,
+                        23,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    "value": [
+                        0.01,
+                        0.01,
+                        0.0443,
+                        0.0025,
+                        0.0024,
+                        0.0029,
+                        0.0123,
+                        0.01,
+                        0.01,
+                        0.01,
+                        2.8882,
+                        0.0005,
+                        0.0008,
+                        0.576,
+                        0.01,
+                        0.0068,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.2587,
+                        0.01,
+                        0.01,
+                        0.0217,
+                        0.0844,
+                        3.5055,
+                        0.0268,
+                        0.3304
+                    ],
+                    "color": [
+                        "rgba(79, 172, 254, 0.25)",
+                        "rgba(251, 194, 235, 0.25)",
+                        "rgba(67, 233, 123, 0.25)",
+                        "rgba(56, 249, 215, 0.25)",
+                        "rgba(245, 158, 11, 0.25)",
+                        "rgba(255, 8, 68, 0.25)",
+                        "rgba(48, 207, 208, 0.25)",
+                        "rgba(0, 242, 254, 0.25)",
+                        "rgba(161, 140, 209, 0.25)",
+                        "rgba(251, 194, 235, 0.25)",
+                        "rgba(67, 233, 123, 0.25)",
+                        "rgba(56, 249, 215, 0.25)",
+                        "rgba(245, 158, 11, 0.25)",
+                        "rgba(255, 8, 68, 0.25)",
+                        "rgba(48, 207, 208, 0.25)",
+                        "rgba(0, 242, 254, 0.25)",
+                        "rgba(161, 140, 209, 0.25)",
+                        "rgba(251, 194, 235, 0.25)",
+                        "rgba(67, 233, 123, 0.25)",
+                        "rgba(245, 158, 11, 0.25)",
+                        "rgba(255, 8, 68, 0.25)",
+                        "rgba(48, 207, 208, 0.25)",
+                        "rgba(0, 242, 254, 0.25)",
+                        "rgba(79, 172, 254, 0.25)",
+                        "rgba(161, 140, 209, 0.25)",
+                        "rgba(161, 140, 209, 0.35)",
+                        "rgba(79, 172, 254, 0.35)",
+                        "rgba(79, 172, 254, 0.35)",
+                        "rgba(56, 249, 215, 0.35)"
+                    ]
+                }
+            },
+            "water_sankey_data": {
+                "labels": [
+                    "700ml Reposado Tequila Bottle",
+                    "Área Cultivada",
+                    "AgriculturalPhase",
+                    "Agave Cosechado",
+                    "Fertilizante (Nitrógeno)",
+                    "Fertilizante (Fósforo)",
+                    "Fertilizante (Potasio)",
+                    "Pesticidas (Ingrediente Activo)",
+                    "Diésel Agrícola",
+                    "Producción Total de Tequila",
+                    "IndustrialPhase",
+                    "Agave Procesado en Molienda",
+                    "Distancia de Transporte de Agave",
+                    "Consumo de Combustóleo",
+                    "Electricidad de la Red",
+                    "Levaduras y Nutrientes",
+                    "Botellas de Vidrio",
+                    "Cajas de Cartón",
+                    "Extracción de Agua Subterránea",
+                    "WaterResource",
+                    "Precipitación Pluvial",
+                    "Evapotranspiración del Cultivo",
+                    "Volumen de Vinazas",
+                    "WasteManagement",
+                    "DQO de Vinazas",
+                    "Bagazo Generado",
+                    "Bagazo a Combustión",
+                    "Bagazo a Compostaje",
+                    "Residuos Sólidos a Relleno",
+                    "Residuos Sólidos a Reciclaje"
+                ],
+                "colors": [
+                    "#38f9d7",
+                    "#4facfe",
+                    "#a18cd1",
+                    "#fbc2eb",
+                    "#43e97b",
+                    "#38f9d7",
+                    "#f59e0b",
+                    "#ff0844",
+                    "#30cfd0",
+                    "#00f2fe",
+                    "#4facfe",
+                    "#a18cd1",
+                    "#fbc2eb",
+                    "#43e97b",
+                    "#38f9d7",
+                    "#f59e0b",
+                    "#ff0844",
+                    "#30cfd0",
+                    "#00f2fe",
+                    "#4facfe",
+                    "#a18cd1",
+                    "#fbc2eb",
+                    "#43e97b",
+                    "#38f9d7",
+                    "#f59e0b",
+                    "#ff0844",
+                    "#30cfd0",
+                    "#00f2fe",
+                    "#4facfe",
+                    "#a18cd1"
+                ],
+                "links": {
+                    "source": [
+                        1,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7,
+                        8,
+                        9,
+                        11,
+                        12,
+                        13,
+                        14,
+                        15,
+                        16,
+                        17,
+                        18,
+                        20,
+                        21,
+                        22,
+                        24,
+                        25,
+                        26,
+                        27,
+                        28,
+                        29,
+                        2,
+                        10,
+                        19,
+                        23
+                    ],
+                    "target": [
+                        2,
+                        2,
+                        2,
+                        2,
+                        2,
+                        2,
+                        2,
+                        10,
+                        10,
+                        10,
+                        10,
+                        10,
+                        10,
+                        10,
+                        10,
+                        19,
+                        19,
+                        19,
+                        23,
+                        23,
+                        23,
+                        23,
+                        23,
+                        23,
+                        23,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    "value": [
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.924,
+                        0.01,
+                        103.1479,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.01,
+                        0.07,
+                        0.08,
+                        104.0819,
+                        0.07
+                    ],
+                    "color": [
+                        "rgba(79, 172, 254, 0.25)",
+                        "rgba(251, 194, 235, 0.25)",
+                        "rgba(67, 233, 123, 0.25)",
+                        "rgba(56, 249, 215, 0.25)",
+                        "rgba(245, 158, 11, 0.25)",
+                        "rgba(255, 8, 68, 0.25)",
+                        "rgba(48, 207, 208, 0.25)",
+                        "rgba(0, 242, 254, 0.25)",
+                        "rgba(161, 140, 209, 0.25)",
+                        "rgba(251, 194, 235, 0.25)",
+                        "rgba(67, 233, 123, 0.25)",
+                        "rgba(56, 249, 215, 0.25)",
+                        "rgba(245, 158, 11, 0.25)",
+                        "rgba(255, 8, 68, 0.25)",
+                        "rgba(48, 207, 208, 0.25)",
+                        "rgba(0, 242, 254, 0.25)",
+                        "rgba(161, 140, 209, 0.25)",
+                        "rgba(251, 194, 235, 0.25)",
+                        "rgba(67, 233, 123, 0.25)",
+                        "rgba(245, 158, 11, 0.25)",
+                        "rgba(255, 8, 68, 0.25)",
+                        "rgba(48, 207, 208, 0.25)",
+                        "rgba(0, 242, 254, 0.25)",
+                        "rgba(79, 172, 254, 0.25)",
+                        "rgba(161, 140, 209, 0.25)",
+                        "rgba(161, 140, 209, 0.35)",
+                        "rgba(79, 172, 254, 0.35)",
+                        "rgba(79, 172, 254, 0.35)",
+                        "rgba(56, 249, 215, 0.35)"
+                    ]
+                }
+            }
+        },
+        "calculated_at": "2026-08-10T17:14:26.457Z"
+    }
+}
+]
