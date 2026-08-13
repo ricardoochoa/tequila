@@ -84,7 +84,8 @@ class TequilaBWCalculator:
                     score = abs(float(val))
                     break
             if score <= 0.0001:
-                score = 0.01
+                continue
+                #score = 0.01
 
             stage_idx = get_or_add_node(stage_name)
             cat_idx = get_or_add_node(category)
@@ -292,8 +293,8 @@ class TequilaBWCalculator:
 
                         computed_amount = raw_amount * vol_scale
 
-                        if fname == "glass_bottles_kg":
-                            computed_amount = computed_amount * (1.0 - (glass_recycling_rate * 0.4))
+                        #if fname == "glass_bottles_kg":
+                            #computed_amount = computed_amount * (1.0 - (glass_recycling_rate * 0.4))
                         if fname == "evapotranspiration_mm":
                             computed_amount = raw_amount * cultivated_area_ha * 10.0 * vol_scale
                         if fname == "agave_transport_km":
@@ -302,8 +303,8 @@ class TequilaBWCalculator:
                             computed_amount = bagasse_gen_ton * (raw_amount / 100.0) * vol_scale
 
                         if fname in ["agave_harvested_ton", "cultivated_area", "bagasse_generated_ton"]:
-                            hotspots.append({"stage": label, "gwp_score": 0.0, "data_tier": "Intermediate Parameter"})
-                            water_hotspots.append({"stage": label, "water_score": 0.0, "data_tier": "Intermediate Parameter"})
+                            #hotspots.append({"stage": label, "gwp_score": 0.0, "data_tier": "Intermediate Parameter"})
+                            #water_hotspots.append({"stage": label, "water_score": 0.0, "data_tier": "Intermediate Parameter"})
                             calc_list.append({"name": label, "category": cat_name, "amount": computed_amount, "type": "technosphere"})
                             continue
 
@@ -382,6 +383,12 @@ class TequilaBWCalculator:
                             s_gwp = round((computed_amount * conv_factor) * factor_gwp, 4)
                             s_water = round((computed_amount * conv_factor) * factor_water, 4)
 
+                            # AGREGAR ESTE BLOQUE: Descuento de impacto por reciclaje
+                            if fname == "glass_bottles_kg":
+                                discount = (1.0 - (glass_recycling_rate * 0.4))
+                                s_gwp = round(s_gwp * discount, 4)
+                                s_water = round(s_water * discount, 4)
+
                             total_gwp += s_gwp
                             total_water += s_water
                             
@@ -439,14 +446,13 @@ class TequilaBWCalculator:
                                 t1_gwp = meta.get("t1_gwp") if meta else None
                                 t1_water = meta.get("t1_water") if meta else None
 
+                                # 1. Cálculos iniciales de impacto
                                 if t1_gwp is not None:
                                     exc_gwp = round((meta["computed_amount"] * meta["conv_factor"]) * t1_gwp, 4)
                                     data_tier_gwp = "Tier 1 (Supplier)"
-                                    gwp_tier1 += max(0.0, exc_gwp)
                                 else:
                                     exc_gwp = round(float(lca_gwp.score), 4)
                                     data_tier_gwp = "Tier 2 (EXIOBASE)"
-                                    gwp_tier2 += max(0.0, exc_gwp)
 
                                 if t1_water is not None:
                                     exc_water = round((meta["computed_amount"] * meta["conv_factor"]) * t1_water, 4)
@@ -454,6 +460,18 @@ class TequilaBWCalculator:
                                 else:
                                     exc_water = round(float(lca_water.score), 4)
                                     data_tier_water = "Tier 2 (EXIOBASE)"
+
+                                # 2. APLICAR DESCUENTO DE RECICLAJE (ANTES DE SUMAR A LOS TOTALES)
+                                if meta and meta.get("field_name") == "glass_bottles_kg":
+                                    discount = (1.0 - (glass_recycling_rate * 0.4))
+                                    exc_gwp = round(exc_gwp * discount, 4)
+                                    exc_water = round(exc_water * discount, 4)
+
+                                # 3. Sumar a los contadores globales y de Tier
+                                if data_tier_gwp == "Tier 1 (Supplier)":
+                                    gwp_tier1 += max(0.0, exc_gwp)
+                                else:
+                                    gwp_tier2 += max(0.0, exc_gwp)
 
                                 total_gwp += exc_gwp
                                 total_water += exc_water
@@ -490,6 +508,12 @@ class TequilaBWCalculator:
 
                         exc_gwp = round((computed_amount * conv_factor) * factor_gwp, 4)
                         exc_water = round((computed_amount * conv_factor) * factor_water, 4)
+
+                        # 🟢 NUEVO: AGREGAR EL DESCUENTO EN EL FALLBACK
+                        if meta.get("field_name") == "glass_bottles_kg":
+                            discount = (1.0 - (glass_recycling_rate * 0.4))
+                            exc_gwp = round(exc_gwp * discount, 4)
+                            exc_water = round(exc_water * discount, 4)
 
                         total_gwp += exc_gwp
                         total_water += exc_water

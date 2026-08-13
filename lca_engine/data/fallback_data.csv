@@ -8,7 +8,7 @@ yeast_nutrients_kg,2021,1.20,kg CO2e / kg,GWP100,"Ecoinvent 3.8: market for yeas
 ref_r22_leaked_kg,2007,1810.0,kg CO2e / kg,GWP100,"IPCC AR4, WGI, Chapter 2 (Table 2.14)","Valor de GWP-100 para R-22 (estándar corporativo de GHG Protocol)."
 ref_r134a_leaked_kg,2007,1430.0,kg CO2e / kg,GWP100,"IPCC AR4, WGI, Chapter 2 (Table 2.14)","Valor de GWP-100 exacto para R-134a (alineado con la referencia esperada del protocolo)."
 municipal_water_m3,2021,0.001,kg CO2e / L,GWP100,"Ecoinvent 3.8: tap water supply","Tratamiento y distribución de agua potable de red municipal."
-evapotranspiration_mm,2018,421.0,m3 eq / ha,AWARE,"WULCA AWARE (Boulay et al., 2018)","Factor de caracterización promedio país (México) para uso agrícola es 42.1 m3 eq/m3. 1 mm de ET por hectárea equivale a 10 m3 de agua (42.1 * 10 = 421)."
+evapotranspiration_mm,2018,42.1,m3 eq / m3,AWARE,"WULCA AWARE (Boulay et al., 2018)","Factor de caracterización promedio país (México) para uso agrícola es 42.1 m3 eq/m3. 1 mm de ET por hectárea equivale a 10 m3 de agua."
 vinasse_cod_mg_l,2019,0.000005,kg CO2e / L,GWP100,"IPCC 2019, Vol 5, Ch 6 (Wastewater Treatment)","MCF=0.8 (fosa profunda), B0=0.25 kg CH4/kg DQO, GWP(CH4)=25. Genera 5 kg CO2e por kg de DQO. Para 1 mg/L, el factor por litro es 5 * 10^-6."
 bagasse_boiler_pct,2021,-0.22,kg CO2e / kg,GWP100,"IPCC 2019 / Bio-energy Credit","Sustitución de energía en calderas de biomasa."
 solid_waste_recycled_t,2020,-3.098,kg CO2e / kg,GWP100,"EPA WARM v15 (Mixed Recyclables)","Crédito de -2.81 Toneladas Cortas CO2e/tonelada corta convertido a toneladas métricas. Refleja emisiones evitadas por el procesamiento de reciclables mixtos."
