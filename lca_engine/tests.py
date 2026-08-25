@@ -9,7 +9,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from lca_engine.models import InventoryScenario, FallbackEmissionFactor
 from lca_engine.forms import DynamicInventoryForm, CSVUploadForm
-from lca_engine.services.bw_calculator import TequilaBWCalculator
+from tequila.lca_engine.services.bw_calculator22 import TequilaBWCalculator
 from lca_engine.services.csv_handler import generate_hotspot_csv, generate_lci_template_csv, parse_key_value_lci_csv
 from lca_engine.services.inventory_mapper import load_inventory_map, get_default_captured_payload
 from lca_engine.views import get_or_create_default_producer_and_product
@@ -48,7 +48,7 @@ class LCAEngineTests(TestCase):
         payload = get_default_captured_payload()
         results = calculator.calculate_lca(payload, enable_exiobase=False)
 
-        # Evapotranspiration has AWARE factor 421.0 but NO GWP100 factor
+        # Evapotranspiration has AWARE factor 42.1 but NO GWP100 factor
         et_gwp = next((h["gwp_score"] for h in results["hotspots"] if "Evapotranspiración" in h["stage"] or "evapotranspiration_mm" in h["stage"]), None)
         et_water = next((wh["water_score"] for wh in results["water_hotspots"] if "Evapotranspiración" in wh["stage"] or "evapotranspiration_mm" in wh["stage"]), None)
 
@@ -69,10 +69,10 @@ class LCAEngineTests(TestCase):
 
     def test_inventory_map_loader(self):
         inv_map = load_inventory_map()
-        self.assertIn("AgriculturalPhase", inv_map)
-        self.assertIn("IndustrialPhase", inv_map)
-        self.assertIn("WaterResource", inv_map)
-        self.assertIn("WasteManagement", inv_map)
+        self.assertIn("Agricultural Phase", inv_map)
+        self.assertIn("Industrial Phase", inv_map)
+        self.assertIn("Water Resource", inv_map)
+        self.assertIn("Waste Management", inv_map)
 
     def test_dynamic_inventory_form(self):
         payload = get_default_captured_payload()

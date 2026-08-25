@@ -26,9 +26,6 @@ ESTRATEGIA:
   La base de datos se registra bajo "EXIOBASE_3" — nombre exacto que espera:
     bw_calculator.py → `"EXIOBASE_3" in bw.databases`
 
-Uso:
-    cd c:\\Users\\Ferna\\Desktop\\x\\tequila
-    python importador_exiobase.py
 """
 
 import os
@@ -212,7 +209,7 @@ def _find_water_key(bw):
     proxy.save()
     return ("biosphere3", proxy_code)
 
-def _compute_gwp_per_sector(io_system):
+#def _compute_gwp_per_sector(io_system): # Version original
     """
     Calcula el GWP total (kg CO2-eq / M.EUR de output) para cada sector
     usando los multiplicadores M de la extensión air_emissions.
@@ -224,44 +221,87 @@ def _compute_gwp_per_sector(io_system):
 
     Devuelve una Series: {(region, sector): gwp_value_kg_co2eq}
     """
-    import numpy as np
-    import pandas as pd
+    #import numpy as np
+    #import pandas as pd
 
-    log.info("Calculando GWP100 pre-agregado por sector...")
+    #log.info("Calculando GWP100 pre-agregado por sector...")
 
-    ae = io_system.air_emissions
-    if ae.M is None:
-        raise RuntimeError("La matriz M de air_emissions no fue calculada. "
-                           "Asegúrate de llamar io.calc_all() antes.")
+    #ae = io_system.air_emissions
+    #if ae.M is None:
+        #raise RuntimeError("La matriz M de air_emissions no fue calculada. "
+                           #"Asegúrate de llamar io.calc_all() antes.")
 
-    M = ae.M   # DataFrame: index=stressors, columns=MultiIndex(region, sector)
+    #M = ae.M   # DataFrame: index=stressors, columns=MultiIndex(region, sector)
 
     # Construir array numpy posicional (evita alineación por etiquetas de pandas 3.x)
-    gwp_array = np.array([GWP100_FACTORS.get(str(s), 0.0) for s in M.index],
-                         dtype=float)
+    #gwp_array = np.array([GWP100_FACTORS.get(str(s), 0.0) for s in M.index],
+                         #dtype=float)
 
-    matched = int((gwp_array > 0).sum())
-    log.info(f"  Stressors con factor GWP > 0: {matched} de {len(gwp_array)} "
-             f"({[str(s) for s, v in zip(M.index, gwp_array) if v > 0]})")
+    #matched = int((gwp_array > 0).sum())
+    #log.info(f"  Stressors con factor GWP > 0: {matched} de {len(gwp_array)} "
+             #f"({[str(s) for s, v in zip(M.index, gwp_array) if v > 0]})")
 
-    if matched == 0:
-        log.error("¡NINGÚN stressor coincidió con GWP100_FACTORS!")
-        log.error(f"Primeros 5 stressors en M.index: {list(M.index[:5])}")
-        raise RuntimeError("GWP mapping falló — revisa los nombres de stressors.")
+    #if matched == 0:
+        #log.error("¡NINGÚN stressor coincidió con GWP100_FACTORS!")
+        #log.error(f"Primeros 5 stressors en M.index: {list(M.index[:5])}")
+        #raise RuntimeError("GWP mapping falló — revisa los nombres de stressors.")
 
     # Dot product posicional: gwp_array @ M  →  Series(region, sector)
     # CRÍTICO: M contiene NaN (celdas vacías en tablas MRIO = sin emisión = 0).
     # En numpy: 0 * NaN = NaN, lo que propagaría NaN a todos los sectores.
     # nan_to_num convierte NaN→0 antes del producto punto.
-    M_clean = np.nan_to_num(M.values, nan=0.0, posinf=0.0, neginf=0.0)
-    gwp_values = gwp_array @ M_clean          # numpy dot: shape (n_sectors,)
-    gwp_series = pd.Series(gwp_values, index=M.columns)
+    #M_clean = np.nan_to_num(M.values, nan=0.0, posinf=0.0, neginf=0.0)
+    #gwp_values = gwp_array @ M_clean          # numpy dot: shape (n_sectors,)
+    #gwp_series = pd.Series(gwp_values, index=M.columns)
 
-    log.info(f"GWP calculado para {len(gwp_series)} sectores.")
-    log.info(f"  Rango: [{gwp_series.min():.4f}, {gwp_series.max():.4f}] kg CO2-eq/M.EUR")
+    #log.info(f"GWP calculado para {len(gwp_series)} sectores.")
+    #log.info(f"  Rango: [{gwp_series.min():.4f}, {gwp_series.max():.4f}] kg CO2-eq/M.EUR")
+
+    #return gwp_series
+
+def _compute_gwp_per_sector(io_system):
+    """
+    Calcula el GWP total usando la matriz de intensidad (S) oficial de PyMRIO 
+    para conservar la armonización de unidades (kg/M.EUR exactos).
+    """
+    import numpy as np
+    import pandas as pd
+
+    log.info("Calculando GWP100 con matrices armonizadas de PyMRIO...")
+
+    # 1. Usar las matrices ya procesadas y escaladas por la librería
+    S_df = io_system.air_emissions.S
+    L_df = io_system.L
+
+    # 2. Búsqueda flexible
+    gwp_list = []
+    for s in S_df.index:
+        s_str = str(s).lower()
+        val = 0.0
+        for key, factor in GWP100_FACTORS.items():
+            if key.lower() in s_str:
+                val = factor
+                break
+        gwp_list.append(val)
+
+    gwp_array = np.array(gwp_list, dtype=float)
+
+    # 3. Álgebra Lineal en NumPy
+    S_clean = np.nan_to_num(S_df.values, nan=0.0)
+    L_clean = np.nan_to_num(L_df.values, nan=0.0)
+    
+    M_array = S_clean @ L_clean
+    gwp_values = gwp_array @ M_array
+    
+    # Filtro de limpieza
+    gwp_values = np.nan_to_num(gwp_values, nan=0.0, posinf=0.0, neginf=0.0)
+    
+    # 4. Serie final
+    gwp_series = pd.Series(gwp_values, index=S_df.columns)
+
+    log.info(f"Rango: [{gwp_series.min():.4f}, {gwp_series.max():.4f}] kg CO2-eq/M.EUR")
 
     return gwp_series
-
 
 def _compute_water_per_sector(io_system):
     """
@@ -379,11 +419,17 @@ def main():
     # 1. Inicializar Brightway2
     bw = _setup_brightway()
 
-    # 2. Idempotencia
+    # 2. Forzar Reinstalación Limpia
     if DB_NAME in bw.databases:
-        log.info(f"'{DB_NAME}' ya registrada en Brightway2. Nada que hacer.")
-        log.info("El motor Tier 2 (EXIOBASE) está activo.")
-        return
+        log.warning(f"Borrando versión sospechosa de '{DB_NAME}'...")
+        del bw.databases[DB_NAME]
+        log.info("Base de datos anterior eliminada. Iniciando cálculo profundo (esto tomará tiempo)...")
+
+    # 2. Idempotencia
+    #if DB_NAME in bw.databases:
+        #log.info(f"'{DB_NAME}' ya registrada en Brightway2. Nada que hacer.")
+        #log.info("El motor Tier 2 (EXIOBASE) está activo.")
+        #return
 
     # 3. Extraer ZIP si es necesario
     _extract_zip()

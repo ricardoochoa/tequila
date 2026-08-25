@@ -1,5 +1,5 @@
 {
-  "AgriculturalPhase": {
+  "Agricultural Phase": {
     "entity_metadata": {
       "exiobase_target_industry": "A_OTCR",
       "exiobase_industry_name": "Cultivation of crops nec",
@@ -129,7 +129,7 @@
       }
     ]
   },
-  "IndustrialPhase": {
+  "Industrial Phase": {
     "entity_metadata": {
       "exiobase_target_industry": "C_BEVE",
       "exiobase_industry_name": "Beverages",
@@ -172,6 +172,7 @@
         "exiobase_name": "Other land transportation services",
         "exiobase_unit": "M.EUR_or_tkm",
         "conversion_factor": null,
+        "price_eur_per_unit": 0.08,
         "fallback_recommended": false,
         "notes": "Se requiere un paso intermedio en Python para multiplicar la masa (t) por los kilómetros (km) e ingresar la variable en toneladas-kilómetro (tkm).",
         "ui_label_es": "Distancia de Transporte de Agave",
@@ -186,7 +187,8 @@
         "exiobase_name": "Heavy Fuel Oil",
         "exiobase_unit": "kg_or_TJ",
         "conversion_factor": 0.99,
-        "fallback_recommended": false,
+        "price_eur_per_unit": 1.43, 
+        "fallback_recommended": true,
         "notes": "Densidad asumida de 0.99 kg/L para combustóleo pesado.",
         "ui_label_es": "Consumo de Combustóleo",
         "ui_description_es": "Ingrese el volumen de combustóleo pesado utilizado en las calderas de la destilería. Registre el valor en litros (L)."
@@ -200,6 +202,7 @@
         "exiobase_name": "Natural gas and services related to natural gas extraction, excluding surveying",
         "exiobase_unit": "kg_or_TJ",
         "conversion_factor": 0.717,
+        "price_eur_per_unit": 0.45, 
         "fallback_recommended": false,
         "notes": "Densidad estándar de gas natural a 1 atm y 20C (~0.717 kg/m3). Para TJ requeriría el poder calorífico inferior (PCI).",
         "ui_label_es": "Consumo de Gas Natural",
@@ -228,6 +231,7 @@
         "exiobase_name": "Electricity nec",
         "exiobase_unit": "MWh_or_TJ",
         "conversion_factor": 0.001,
+        "price_eur_per_unit": 120.0,
         "fallback_recommended": false,
         "notes": "En EXIOBASE, puede rutearse a C_POWZ (general) o C_POWG (Gas) si el modelo consecuencial asume ciclos combinados como mix marginal a largo plazo en México.",
         "ui_label_es": "Electricidad de la Red",
@@ -297,6 +301,7 @@
         "exiobase_name": "Glass and glass products",
         "exiobase_unit": "kg_or_M.EUR",
         "conversion_factor": 1.0,
+        "price_eur_per_unit": 0.5, 
         "fallback_recommended": false,
         "ui_label_es": "Botellas de Vidrio",
         "ui_description_es": "Ingrese el peso total de las botellas de vidrio nuevas utilizadas para el envasado del producto terminado. Registre el valor en kilogramos (kg)."
@@ -310,13 +315,14 @@
         "exiobase_name": "Paper and paper products",
         "exiobase_unit": "kg",
         "conversion_factor": 1.0,
+        "price_eur_per_unit": 0.16,
         "fallback_recommended": false,
         "ui_label_es": "Cajas de Cartón",
         "ui_description_es": "Ingrese el peso total de los empaques de cartón corrugado utilizados para la distribución del producto. Registre el valor en kilogramos (kg)."
       }
     ]
   },
-  "WaterResource": {
+  "Water Resource": {
     "entity_metadata": {
       "description": "Modelado de Huella Azul y Verde separados del inventario físico principal."
     },
@@ -379,7 +385,7 @@
       }
     ]
   },
-  "WasteManagement": {
+  "Waste Management": {
     "entity_metadata": {
       "description": "Modelado del metabolismo circular, efluentes y residuos orgánicos e inorgánicos."
     },
@@ -463,6 +469,7 @@
         "exiobase_name": "Food waste for treatment: composting and land application",
         "exiobase_unit": "kg",
         "conversion_factor": 1000.0,
+        "price_eur_per_unit": 0.05,
         "fallback_recommended": false,
         "notes": "El factor 1000.0 debe aplicarse a la masa resultante del porcentaje.",
         "ui_label_es": "Bagazo a Compostaje",
@@ -490,6 +497,7 @@
         "exiobase_name": "Inert/metal/hazardous waste for treatment: landfill",
         "exiobase_unit": "kg",
         "conversion_factor": 1000.0,
+        "price_eur_per_unit": 0.12,
         "fallback_recommended": false,
         "ui_label_es": "Residuos Sólidos a Relleno",
         "ui_description_es": "Ingrese el peso de los residuos industriales y de empaque enviados a disposición final en vertedero. Registre el valor en toneladas (t)."

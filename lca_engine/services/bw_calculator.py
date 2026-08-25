@@ -115,6 +115,7 @@ class TequilaBWCalculator:
         }
 
     @staticmethod
+
     def _get_lcia_method(bw_module: Any, category: str) -> Any:
         """
         Dynamically finds the appropriate LCIA method tuple from bw.methods with robust fallbacks.
@@ -150,6 +151,7 @@ class TequilaBWCalculator:
                         return m
             return ('AWARE', 'water use', 'agricultural and industrial')
         return None
+    
 
     def calculate_lca(
             self,
@@ -251,6 +253,13 @@ class TequilaBWCalculator:
                     )
                     tequila_act.save()
 
+                    # 🟢 NUEVO: Declarar que esta actividad produce 1 unidad de sí misma
+                    tequila_act.new_exchange(
+                        input=tequila_act.key,
+                        amount=1.0,
+                        type="production"
+                    ).save()
+
                     has_exio = "EXIOBASE_3" in bw.databases and enable_exiobase
                     exio_db = bw.Database("EXIOBASE_3") if has_exio else None
                 except Exception as e:
@@ -319,14 +328,51 @@ class TequilaBWCalculator:
                             try:
                                 results = exio_db.search(exio_code) or exio_db.search(exio_name)
                                 if results:
+                                    # NUEVA LÓGICA: Vector de Precios para EXIOBASE Monetario
                                     exio_unit = f_info.get("exiobase_unit")
-                                    exio_scale = 1e-06 if exio_unit == "Mm3" else conv_factor
-                                    exc_amount = computed_amount * exio_scale
+                                    price_eur = f_info.get("price_eur_per_unit", 1.0) # Usa 1.0 EUR como salvavidas si el JSON no tiene el dato
+                                    if exio_unit == "Mm3":
+                                        # El agua subterránea usa un escalado directo físico (Millones de m3)
+                                        exc_amount = computed_amount * 1e-06
+                                    else:
+                                        # 1. Obtener la cantidad física real (ej. Litros -> Kg)
+                                        physical_amount = computed_amount * conv_factor
+                                        
+                                        # 2. Calcular el valor económico (Cantidad física * Precio en EUR)
+                                        economic_value_eur = physical_amount * price_eur
+                                        
+                                        # 3. Escalar a Millones de Euros (M.EUR) para la inyección en EXIOBASE
+                                        exc_amount = economic_value_eur * 1e-06
+
                                     tequila_act.new_exchange(
                                         input=results[0].key,
                                         amount=exc_amount,
                                         type="technosphere"
                                     ).save()
+
+# Version anterior
+                                    # Inyectar unidades físicas directas para la matriz EXIOBASE pxp
+                                    #exio_unit = f_info.get("exiobase_unit")
+                                    
+                                    # Calculamos la cantidad física neta
+                                    #cantidad_fisica = computed_amount * conv_factor
+                                    
+                                    #if exio_unit == "Mm3":
+                                        # Flujos directos de agua que operan en Mm3
+                                        #exc_amount = cantidad_fisica * 1e-06
+                                    #else:
+                                        # Para EXIOBASE pxp, dividimos por 1,000,000 para pasar a las 
+                                        # unidades macro físicas (ej. de kg a kilotoneladas - kt)
+                                        #exc_amount = cantidad_fisica / 1000000.0
+                                        
+                                    #print(f"📦 INSUMO FÍSICO: {exio_name} | Cantidad inyectada: {exc_amount} (Unidad Macro)")
+
+                                    #tequila_act.new_exchange(
+                                        #input=results[0].key,
+                                        #amount=exc_amount,
+                                        #type="technosphere"
+                                    #).save()
+
                                     bound_exchanges += 1
                                     bound = True
                                     input_key = results[0].key
@@ -403,17 +449,35 @@ class TequilaBWCalculator:
 
                 # STEP 3: Execute Matrix LCIA & Process Contribution with Independent Overrides
                 if tequila_act and bound_exchanges > 0:
+                    # 🟢 1. Registrar las dependencias (La Llave Maestra)
+                    if "EXIOBASE_3" in bw.databases:
+                        bw.databases["Tequila_Foreground"]["depends"] = ["EXIOBASE_3", "biosphere3"]
+                        bw.databases.flush()
+                    
+                    # 🟢 2. Emisión directa de 0.0 (El Pase de Entrada para evitar que Brightway colapse)
+                    bio_db = bw.Database("biosphere3")
+                    co2_flow = bio_db.search("Carbon dioxide, fossil")[0]
+                    tequila_act.new_exchange(
+                        input=co2_flow.key, 
+                        amount=0.0, 
+                        type="biosphere"
+                    ).save()
+                    
+                    # 🟢 3. Compilar a matrices
+                    bw.Database("Tequila_Foreground").process()
+                    
                     lca_gwp = None
                     lca_water = None
                     try:
                         gwp_method = self._get_lcia_method(bw, "gwp")
                         aware_method = self._get_lcia_method(bw, "water")
 
-                        lca_gwp = bw.LCA({tequila_act: 1}, method=gwp_method)
+                        # Usamos .key para evitar el KeyError silencioso de Brightway
+                        lca_gwp = bw.LCA({tequila_act.key: 1}, method=gwp_method)
                         lca_gwp.lci()
                         lca_gwp.lcia()
 
-                        lca_water = bw.LCA({tequila_act: 1}, method=aware_method)
+                        lca_water = bw.LCA({tequila_act.key: 1}, method=aware_method)
                         lca_water.lci()
                         lca_water.lcia()
                     except Exception as e:
@@ -426,8 +490,17 @@ class TequilaBWCalculator:
                         try:
                             for exc in tequila_act.exchanges():
                                 exc_type = exc.get("type") if hasattr(exc, "get") else getattr(exc, "type", None)
-                                if str(exc_type) == "production":
+                                # 🟢 NUEVO: Ignorar tanto la producción como la biósfera
+                                if str(exc_type) in ["production", "biosphere"]:
                                     continue
+                                
+                            #for exc in tequila_act.exchanges():
+                                #exc_type = exc.get("type") if hasattr(exc, "get") else getattr(exc, "type", None)
+                                #if str(exc_type) == "production":
+                                    #continue
+
+                                #input_key = exc.input.key if hasattr(exc.input, "key") else exc.input
+                                #meta = bound_exchange_map.get(input_key)
 
                                 input_key = exc.input.key if hasattr(exc.input, "key") else exc.input
                                 meta = bound_exchange_map.get(input_key)
@@ -438,7 +511,11 @@ class TequilaBWCalculator:
 
                                 label = meta.get("label", str(exc.input)) if meta else str(exc.input)
                                 
-                                demand_dict = {exc.input: exc["amount"]}
+                                #demand_dict = {exc.input: exc["amount"]}
+                                #lca_gwp.redo_lcia(demand_dict)
+                                #lca_water.redo_lcia(demand_dict)
+
+                                demand_dict = {input_key: exc["amount"]}
                                 lca_gwp.redo_lcia(demand_dict)
                                 lca_water.redo_lcia(demand_dict)
 
@@ -446,12 +523,26 @@ class TequilaBWCalculator:
                                 t1_gwp = meta.get("t1_gwp") if meta else None
                                 t1_water = meta.get("t1_water") if meta else None
 
+                                # --- INICIO DEL BLOQUE DE AUDITORÍA ---
+                                raw_exiobase_gwp = float(lca_gwp.score)
+                                raw_exiobase_water = float(lca_water.score)
+                                
+                                print("\n" + "="*50)
+                                print(f"🔍 SECTOR EVALUADO: {label}")
+                                print(f"   -> Categoría: {meta.get('category', 'N/A') if meta else 'N/A'}")
+                                print(f"   -> Cantidad Física (Botella): {meta.get('computed_amount', 0) * meta.get('conv_factor', 1)} unidades")
+                                print(f"   -> Demanda inyectada a EXIOBASE (M.EUR o Mm3): {exc['amount']}")
+                                print(f"   -> GWP Crudo (EXIOBASE): {raw_exiobase_gwp} kg CO2-eq")
+                                print(f"   -> Factor Tier 1 Presente: {'SÍ' if t1_gwp is not None else 'NO'}")
+                                print("="*50 + "\n")
+                                # --- FIN DEL BLOQUE DE AUDITORÍA ---
+
                                 # 1. Cálculos iniciales de impacto
                                 if t1_gwp is not None:
                                     exc_gwp = round((meta["computed_amount"] * meta["conv_factor"]) * t1_gwp, 4)
                                     data_tier_gwp = "Tier 1 (Supplier)"
                                 else:
-                                    exc_gwp = round(float(lca_gwp.score), 4)
+                                    exc_gwp = round(raw_exiobase_gwp, 4)
                                     data_tier_gwp = "Tier 2 (EXIOBASE)"
 
                                 if t1_water is not None:

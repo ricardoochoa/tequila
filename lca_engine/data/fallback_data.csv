@@ -14,3 +14,4 @@ bagasse_boiler_pct,2021,-0.22,kg CO2e / kg,GWP100,"IPCC 2019 / Bio-energy Credit
 solid_waste_recycled_t,2020,-3.098,kg CO2e / kg,GWP100,"EPA WARM v15 (Mixed Recyclables)","Crédito de -2.81 Toneladas Cortas CO2e/tonelada corta convertido a toneladas métricas. Refleja emisiones evitadas por el procesamiento de reciclables mixtos."
 municipal_water_m3,2026,0.0428,m3 eq / L,AWARE,"Boulay et al. (2018)","Country average non-agri AWARE factor for MX (42.8 m3/m3) scaled by 1/1000 for Django LCI conversion."
 groundwater_m3,2026,88.0,m3 eq / m3,AWARE,"Boulay et al. (2018)","Country average unspecified AWARE factor for MX (88.0 m3/m3) for raw m3 Django LCI conversion."
+fuel_oil_liters,2026,3.04601,kg CO2e / L,GWP100,"Ministry for the Environment of New Zealand","Emisión directa por combustión de combustóleo pesado (Heavy Fuel Oil) en el sector industrial."

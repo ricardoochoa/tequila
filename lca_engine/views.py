@@ -40,14 +40,42 @@ def get_or_create_default_producer_and_product():
 
 
 def dashboard_view(request):
+    #scenario = get_or_create_default_producer_and_product()
+
+    #fu_ml = float(request.GET.get("functional_unit", 700.0))
+    #recycling_pct = float(request.GET.get("glass_recycling_rate", 12)) / 100.0
+    #if request.GET:
+        #enable_exio = request.GET.get("enable_exiobase") in ["on", "true", "True", "1"]
+    #else:
+        #enable_exio = True
+
+    #calculator = TequilaBWCalculator()
+    #results = calculator.calculate_lca(
+        #scenario.captured_payload,
+        #functional_unit_volume_ml=fu_ml,
+        #glass_recycling_rate=recycling_pct,
+        #enable_exiobase=enable_exio
+    #)
+
     scenario = get_or_create_default_producer_and_product()
 
-    fu_ml = float(request.GET.get("functional_unit", 700.0))
-    recycling_pct = float(request.GET.get("glass_recycling_rate", 12)) / 100.0
+    # 1. Leer parámetros del GET (si se acaba de presionar "Recalcular")
     if request.GET:
+        fu_ml = float(request.GET.get("functional_unit", 700.0))
+        recycling_rate = float(request.GET.get("glass_recycling_rate", 12))
         enable_exio = request.GET.get("enable_exiobase") in ["on", "true", "True", "1"]
+        
+        # Guardar estos valores en la Sesión del usuario
+        request.session["functional_unit"] = fu_ml
+        request.session["glass_recycling_rate"] = recycling_rate
+        request.session["enable_exiobase"] = enable_exio
     else:
-        enable_exio = True
+        # 2. Si no hay GET (navegación normal), leer de la Sesión (con valores por defecto)
+        fu_ml = float(request.session.get("functional_unit", 700.0))
+        recycling_rate = float(request.session.get("glass_recycling_rate", 12.0))
+        enable_exio = request.session.get("enable_exiobase", True)
+
+    recycling_pct = recycling_rate / 100.0
 
     calculator = TequilaBWCalculator()
     results = calculator.calculate_lca(
@@ -68,9 +96,15 @@ def dashboard_view(request):
         }
     )
 
+    #param_form = GlobalParameterForm(initial={
+        #"functional_unit": fu_ml,
+        #"glass_recycling_rate": int(recycling_pct * 100),
+        #"enable_exiobase": enable_exio
+    #})
+
     param_form = GlobalParameterForm(initial={
         "functional_unit": fu_ml,
-        "glass_recycling_rate": int(recycling_pct * 100),
+        "glass_recycling_rate": int(recycling_rate), # Usamos la variable entera
         "enable_exiobase": enable_exio
     })
 
@@ -213,12 +247,12 @@ def benchmark_view(request):
 
 def export_csv_view(request):
     scenario = get_or_create_default_producer_and_product()
-    fu_ml = float(request.GET.get("functional_unit", 700.0))
-    recycling_pct = float(request.GET.get("glass_recycling_rate", 12)) / 100.0
-    if request.GET:
-        enable_exio = request.GET.get("enable_exiobase") in ["on", "true", "True", "1"]
-    else:
-        enable_exio = True
+    
+    # Leer el estado activo desde la sesión en lugar de GET
+    fu_ml = float(request.session.get("functional_unit", 700.0))
+    recycling_rate = float(request.session.get("glass_recycling_rate", 12.0))
+    recycling_pct = recycling_rate / 100.0
+    enable_exio = request.session.get("enable_exiobase", True)
 
     results = TequilaBWCalculator().calculate_lca(
         scenario.captured_payload,
@@ -231,3 +265,23 @@ def export_csv_view(request):
     response = HttpResponse(csv_content, content_type="text/csv")
     response["Content-Disposition"] = 'attachment; filename="tequila_lca_hotspots_summary.csv"'
     return response
+
+    #scenario = get_or_create_default_producer_and_product()
+    #fu_ml = float(request.GET.get("functional_unit", 700.0))
+    #recycling_pct = float(request.GET.get("glass_recycling_rate", 12)) / 100.0
+    #if request.GET:
+        #enable_exio = request.GET.get("enable_exiobase") in ["on", "true", "True", "1"]
+    #else:
+        #enable_exio = True
+
+    #results = TequilaBWCalculator().calculate_lca(
+        #scenario.captured_payload,
+        #functional_unit_volume_ml=fu_ml,
+        #glass_recycling_rate=recycling_pct,
+        #enable_exiobase=enable_exio
+    #)
+
+    #csv_content = generate_hotspot_csv(results["hotspots"], results.get("water_hotspots"))
+    #response = HttpResponse(csv_content, content_type="text/csv")
+    #response["Content-Disposition"] = 'attachment; filename="tequila_lca_hotspots_summary.csv"'
+    #return response

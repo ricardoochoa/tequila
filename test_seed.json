@@ -326,11 +326,11 @@
     "fields": {
         "django_field": "evapotranspiration_mm",
         "reporting_year": 2018,
-        "emission_factor": 421.0,
-        "unit": "m3 eq / ha",
+        "emission_factor": 42.1,
+        "unit": "m3 eq / m3",
         "indicator": "AWARE",
         "source_reference": "WULCA AWARE (Boulay et al., 2018)",
-        "notes": "Factor de caracterización promedio país (México) para uso agrícola es 42.1 m3 eq/m3. 1 mm de ET por hectárea equivale a 10 m3 de agua (42.1 * 10 = 421)."
+        "notes": "Factor de caracterización promedio país (México) para uso agrícola es 42.1 m3 eq/m3. 1 mm de ET por hectárea equivale a 10 m3 de agua."
     }
 },
 {
@@ -424,6 +424,7 @@
         "notes": "Country average unspecified AWARE factor for MX (88.0 m3/m3) for raw m3 Django LCI conversion."
     }
 },
+
 {
     "model": "lca_engine.inventoryexchange",
     "pk": 1,
